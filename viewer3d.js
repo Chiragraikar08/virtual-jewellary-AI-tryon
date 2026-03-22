@@ -284,7 +284,7 @@ class JewelryViewer {
             this.currentMesh = null;
         }
 
-        const url = `/static/models/${encodeURIComponent(glbFile)}`;
+        const url = `backend/static/models/${encodeURIComponent(glbFile)}`;
 
         this.loader.load(
             url,

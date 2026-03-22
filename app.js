@@ -102,15 +102,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { }
 
-        try {
-            const res = await fetch('/api/gold-rate');
-            const data = await res.json();
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-            applyGoldRate(data);
-        } catch (err) {
-            console.warn('Gold rate fetch failed, using fallback.', err);
-            renderGoldWidget(null);
-        }
+        // Static gold rate for GitHub Pages (no backend available)
+        const staticData = {
+            rate_22k_per_gram: 6800,
+            rate_24k_per_gram: 7400,
+            usd_to_inr: 83.5,
+            date: new Date().toISOString().slice(0, 10)
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(staticData));
+        applyGoldRate(staticData);
     }
 
     function applyGoldRate(data) {
@@ -236,33 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODE 3: AI TRY-ON — Python Launcher
     // ══════════════════════════════════════════════════════════
     if (btnLaunchPython) {
-        btnLaunchPython.addEventListener('click', async () => {
-            btnLaunchPython.textContent = '🚀 Launching...';
-            btnLaunchPython.disabled = true;
-            try {
-                const res = await fetch('/api/start-tryon');
-                const data = await res.json();
-                if (data.status === 'launched') {
-                    btnLaunchPython.textContent = '✅ System Running';
-                    setTimeout(() => {
-                        btnLaunchPython.textContent = '🚀 Launch AI Try-On (Desktop)';
-                        btnLaunchPython.disabled = false;
-                    }, 3000);
-                } else if (data.status === 'already_running') {
-                    btnLaunchPython.textContent = '⚠️ Already Running';
-                    setTimeout(() => {
-                        btnLaunchPython.textContent = '🚀 Launch AI Try-On (Desktop)';
-                        btnLaunchPython.disabled = false;
-                    }, 3000);
-                } else {
-                    throw new Error(data.error || data.message || "Unknown error");
-                }
-            } catch (err) {
-                console.error('Failed to launch Python try-on:', err);
-                btnLaunchPython.textContent = '❌ Launch Failed';
-                btnLaunchPython.disabled = false;
-                alert('Could not start the AI system. Please ensure the backend server is running and Python is installed.');
-            }
+        btnLaunchPython.addEventListener('click', () => {
+            alert('🖥️ Desktop AI Try-On requires the local backend server.\n\nTo use this feature:\n1. Run "python backend/app.py" on your computer\n2. Open http://localhost:5000 in your browser\n\nThe browser-based camera try-on below works without a backend!');
         });
     }
 

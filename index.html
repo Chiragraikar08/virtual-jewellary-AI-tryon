@@ -154,7 +154,7 @@
   <div class="login-overlay" id="login-overlay">
     <div class="login-box">
       <div class="login-logo">
-        <img src="static/images/logo.jpg" alt="Vinayaka Jewellary Logo" />
+        <img src="backend/static/images/logo.jpg" alt="Vinayaka Jewellary Logo" />
       </div>
       <h2>Welcome to VINAYAKA JEWELLARY</h2>
       <p>Please log in or sign up to explore our premium try-on experience.</p>
@@ -177,7 +177,7 @@
   <!-- ═══════════════════════════════════════ HEADER -->
   <header class="header">
     <a href="#" class="logo" aria-label="VINAYAKA JEWELLARY Home">
-      <img src="static/images/logo.jpg" alt="Logo" class="logo-icon-img" />
+      <img src="backend/static/images/logo.jpg" alt="Logo" class="logo-icon-img" />
       <div>
         <div class="logo-text">VINAYAKA JEWELLARY</div>
         <div class="logo-sub">Virtual Jewelry</div>
@@ -213,7 +213,7 @@
       <!-- Settings Dropdown -->
       <div class="settings-dropdown">
         <button class="settings-btn" id="settings-btn" aria-label="Settings">
-          <img src="static/images/logo.jpg" alt="Profile Logo" class="profile-logo" />
+          <img src="backend/static/images/logo.jpg" alt="Profile Logo" class="profile-logo" />
         </button>
         <div class="settings-menu" id="settings-menu">
           <a href="#" class="settings-item" id="btn-profile">👤 Profile</a>
@@ -577,43 +577,17 @@
       // Also attach to the desktop launcher button if it exists
       const desktopLauncherBtn = document.getElementById('btn-launch-python');
 
-      const launchTryOn = async (btn) => {
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '⏳ Launching...';
-        btn.disabled = true;
-
-        try {
-          const response = await fetch('/start_tryon');
-          const data = await response.json();
-
-          if (response.ok) {
-            if (data.status === 'already_running') {
-              alert(data.message || 'AI Try-On is already running.');
-            }
-            btn.innerHTML = '✅ Launched';
-          } else {
-            alert('Camera failed: ' + (data.error || data.details || 'Unknown error'));
-            btn.innerHTML = originalText;
-          }
-        } catch (err) {
-          console.error('Launch error:', err);
-          alert('Failed to connect to server');
-          btn.innerHTML = originalText;
-        }
-
-        setTimeout(() => {
-          btn.innerHTML = originalText;
-          btn.disabled = false;
-        }, 3000);
+      const launchTryOn = (btn) => {
+        // Switch to Try-On mode panel (no backend needed)
+        const tryonTab = document.querySelector('[data-mode="tryon"]');
+        if (tryonTab) tryonTab.click();
       };
 
       if (tryOnBtn) {
         tryOnBtn.addEventListener('click', () => launchTryOn(tryOnBtn));
       }
 
-      if (desktopLauncherBtn) {
-        desktopLauncherBtn.addEventListener('click', () => launchTryOn(desktopLauncherBtn));
-      }
+      // Desktop launcher is handled in app.js — we don't re-attach here
 
       // Login Logic (client-side with localStorage for GitHub Pages)
       const loginOverlay = document.getElementById('login-overlay');
