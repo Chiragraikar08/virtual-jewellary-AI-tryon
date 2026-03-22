@@ -1,8 +1,0 @@
-necklace150.png: AR=1.10 (tw=472, th=429) | orig=(543x459) | top_pad=0.00
-necklace155.png: AR=0.79 (tw=441, th=557) | orig=(445x560) | top_pad=0.00
-necklace159.png: AR=0.53 (tw=231, th=439) | orig=(450x450) | top_pad=0.00
-necklace66.png: AR=0.94 (tw=477, th=508) | orig=(482x517) | top_pad=0.00
-necklace69 copy.png: AR=0.84 (tw=443, th=528) | orig=(471x530) | top_pad=0.00
-necklacerr2.png: AR=1.44 (tw=364, th=252) | orig=(500x500) | top_pad=0.24
-necklacerr3.png: AR=1.36 (tw=375, th=275) | orig=(500x500) | top_pad=0.23
-necklacerr5.png: AR=1.12 (tw=461, th=410) | orig=(500x500) | top_pad=0.00
