@@ -160,15 +160,15 @@
       <p>Please log in or sign up to explore our premium try-on experience.</p>
 
       <div class="login-tabs">
-        <button type="button" class="login-tab active" id="tab-signin" onclick="document.getElementById('login-form').action='/login'; document.getElementById('btn-login-submit').innerText='Sign In'; this.classList.add('active'); document.getElementById('tab-signup').classList.remove('active');">Sign In</button>
-        <button type="button" class="login-tab" id="tab-signup" onclick="document.getElementById('login-form').action='/register'; document.getElementById('btn-login-submit').innerText='Sign Up'; this.classList.add('active'); document.getElementById('tab-signin').classList.remove('active');">Sign Up</button>
+        <button type="button" class="login-tab active" id="tab-signin">Sign In</button>
+        <button type="button" class="login-tab" id="tab-signup">Sign Up</button>
       </div>
 
-      <form class="login-form" id="login-form" method="POST" action="/login">
+      <form class="login-form" id="login-form" onsubmit="return false;">
         <input type="text" name="name" id="login-name" placeholder="Full Name" style="display: none;" />
-        <input type="text" name="email" placeholder="Email" required />
+        <input type="text" name="email" id="login-email" placeholder="Email" required />
         <input type="password" name="password" id="login-password" placeholder="Password" required />
-        <div id="login-error" style="display: none; color: #ff6b6b; font-size: 14px; margin-bottom: 15px; text-align: center;">Invalid credentials - Please try again</div>
+        <div id="login-error" style="display: none; color: #ff6b6b; font-size: 14px; margin-bottom: 15px; text-align: center;">Please fill in all fields</div>
         <button type="submit" class="btn-login" id="btn-login-submit">Sign In</button>
       </form>
     </div>
@@ -615,16 +615,21 @@
         desktopLauncherBtn.addEventListener('click', () => launchTryOn(desktopLauncherBtn));
       }
 
-      // Login Logic
+      // Login Logic (client-side with localStorage for GitHub Pages)
       const loginOverlay = document.getElementById('login-overlay');
       const loginForm = document.getElementById('login-form');
       const tabSignIn = document.getElementById('tab-signin');
       const tabSignUp = document.getElementById('tab-signup');
       const loginName = document.getElementById('login-name');
+      const loginEmail = document.getElementById('login-email');
+      const loginPassword = document.getElementById('login-password');
       const btnLoginSubmit = document.getElementById('btn-login-submit');
+      const loginError = document.getElementById('login-error');
+      let isSignUp = false;
 
       if (tabSignIn && tabSignUp) {
         tabSignIn.addEventListener('click', () => {
+          isSignUp = false;
           tabSignIn.classList.add('active');
           tabSignUp.classList.remove('active');
           if (loginName) {
@@ -632,8 +637,10 @@
             loginName.removeAttribute('required');
           }
           btnLoginSubmit.textContent = 'Sign In';
+          if (loginError) loginError.style.display = 'none';
         });
         tabSignUp.addEventListener('click', () => {
+          isSignUp = true;
           tabSignUp.classList.add('active');
           tabSignIn.classList.remove('active');
           if (loginName) {
@@ -641,13 +648,62 @@
             loginName.setAttribute('required', 'true');
           }
           btnLoginSubmit.textContent = 'Sign Up';
+          if (loginError) loginError.style.display = 'none';
         });
       }
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has('error')) {
-        const loginError = document.getElementById('login-error');
-        if (loginError) loginError.style.display = 'block';
+
+      // Handle login form submission client-side
+      if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const email = loginEmail ? loginEmail.value.trim() : '';
+          const password = loginPassword ? loginPassword.value.trim() : '';
+          const name = loginName ? loginName.value.trim() : '';
+
+          if (!email || !password || (isSignUp && !name)) {
+            if (loginError) {
+              loginError.textContent = 'Please fill in all fields';
+              loginError.style.display = 'block';
+            }
+            return;
+          }
+
+          if (isSignUp) {
+            // Save user to localStorage
+            const users = JSON.parse(localStorage.getItem('vj_users') || '{}');
+            if (users[email]) {
+              if (loginError) {
+                loginError.textContent = 'Account already exists. Please sign in.';
+                loginError.style.display = 'block';
+              }
+              return;
+            }
+            users[email] = { name: name, password: password };
+            localStorage.setItem('vj_users', JSON.stringify(users));
+          } else {
+            // Verify user from localStorage
+            const users = JSON.parse(localStorage.getItem('vj_users') || '{}');
+            if (users[email] && users[email].password !== password) {
+              if (loginError) {
+                loginError.textContent = 'Invalid password. Please try again.';
+                loginError.style.display = 'block';
+              }
+              return;
+            }
+            // If user doesn't exist in localStorage, allow sign-in anyway (demo mode)
+            if (!users[email]) {
+              users[email] = { name: email.split('@')[0], password: password };
+              localStorage.setItem('vj_users', JSON.stringify(users));
+            }
+          }
+
+          // Set session
+          localStorage.setItem('vj_session', email);
+          loginOverlay.classList.add('hidden');
+          const profileBtn = document.getElementById('btn-profile');
+          if (profileBtn) profileBtn.innerHTML = `👤 ${email.split('@')[0]}`;
+          if (loginError) loginError.style.display = 'none';
+        });
       }
 
       // Settings Dropdown Logic
@@ -669,6 +725,7 @@
       if (btnLogout) {
         btnLogout.addEventListener('click', (e) => {
           e.preventDefault();
+          localStorage.removeItem('vj_session');
           settingsMenu.classList.remove('active');
           loginOverlay.classList.remove('hidden');
           loginForm.reset();
@@ -677,21 +734,17 @@
     });
   </script>
 
-  <!-- ── Check User Session ── -->
+  <!-- ── Check User Session (localStorage) ── -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      fetch("/api/user")
-        .then(res => res.json())
-        .then(data => {
-          if (data.user) {
-            document.getElementById("login-overlay").classList.add("hidden");
-            const profileBtn = document.getElementById("btn-profile");
-            if(profileBtn) profileBtn.innerHTML = `👤 ${data.user.split('@')[0]}`;
-          } else {
-            document.getElementById("login-overlay").classList.remove("hidden");
-          }
-        })
-        .catch(err => console.error("Session check failed"));
+      const sessionUser = localStorage.getItem('vj_session');
+      if (sessionUser) {
+        document.getElementById("login-overlay").classList.add("hidden");
+        const profileBtn = document.getElementById("btn-profile");
+        if(profileBtn) profileBtn.innerHTML = `👤 ${sessionUser.split('@')[0]}`;
+      } else {
+        document.getElementById("login-overlay").classList.remove("hidden");
+      }
     });
   </script>
 </body>
