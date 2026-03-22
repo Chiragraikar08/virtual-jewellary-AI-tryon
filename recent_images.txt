@@ -1,0 +1,10 @@
+earring154 copy.png 1774188311.734602 C:/Users/CHIRAG.C/OneDrive/Documents/smtgldjwl\backend\earring\earring154 copy.png
+earring11.png 1774188234.3492157 C:/Users/CHIRAG.C/Downloads\earring11.png
+earring11.png 1774188234.3492157 C:/Users/CHIRAG.C/OneDrive/Documents/smtgldjwl\backend\earring\earring11.png
+earring13 copy.png 1774188176.919063 C:/Users/CHIRAG.C/OneDrive/Documents/smtgldjwl\backend\earring\earring13 copy.png
+earring14.png 1774188107.444581 C:/Users/CHIRAG.C/OneDrive/Documents/smtgldjwl\backend\earring\earring14.png
+ring1.avif 1774085232.6778052 C:/Users/CHIRAG.C/Downloads\ring1.avif
+ring1.avif 1774085232.6778052 C:/Users/CHIRAG.C/OneDrive/Documents/smtgldjwl\backend\static\images\catalog\ring\ring1.avif
+ring2.avif 1774085222.168222 C:/Users/CHIRAG.C/Downloads\ring2.avif
+ring2.avif 1774085222.168222 C:/Users/CHIRAG.C/OneDrive/Documents/smtgldjwl\backend\static\images\catalog\ring\ring2.avif
+ring3.avif 1774085216.6223104 C:/Users/CHIRAG.C/Downloads\ring3.avif

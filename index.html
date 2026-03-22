@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VINAYAKA JEWELLARY — Virtual Jewelry Try-On</title>
+  <meta name="description"
+    content="AI-powered virtual jewelry try-on. Explore stunning 3D jewelry and see how it looks on you using your webcam." />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* GLB loading spinner */
+    .viewer-loading-glb {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 10, 16, 0.72);
+      border-radius: inherit;
+      gap: 14px;
+      pointer-events: none;
+    }
+
+    .glb-spinner {
+      width: 52px;
+      height: 52px;
+      border: 3px solid rgba(212, 168, 71, 0.25);
+      border-top-color: #d4a847;
+      border-radius: 50%;
+      animation: glb-spin 0.85s linear infinite;
+    }
+
+    @keyframes glb-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .glb-loading-text {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: rgba(212, 168, 71, 0.85);
+      letter-spacing: 0.06em;
+    }
+
+    /* 3D Try On Button Styles */
+    .btn-3d-tryon {
+      background: linear-gradient(135deg, #d4a847 0%, #a47621 100%);
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(212, 168, 71, 0.3);
+      width: 100%;
+    }
+
+    .btn-3d-tryon:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(212, 168, 71, 0.6);
+      background: linear-gradient(135deg, #ebd197 0%, #c4943b 100%);
+    }
+
+    .btn-3d-tryon:active {
+      transform: translateY(1px);
+    }
+
+    /* Catalog Filters */
+    .catalog-filters {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid rgba(212, 168, 71, 0.4);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      border-color: #d4a847;
+      color: #d4a847;
+    }
+
+    .filter-btn.active {
+      background: rgba(212, 168, 71, 0.15);
+      border-color: #d4a847;
+      color: #d4a847;
+      font-weight: 500;
+    }
+  </style>
+
+  <!-- Three.js r128 — last version with UMD examples/js addons -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- Custom scripts with cache busting -->
+  <script src="jewelry-data.js?v=11" defer></script>
+  <script src="app.js?v=11" defer></script>
+  <script src="viewer3d.js?v=11" defer></script>
+  <script src="tryon.js?v=11" defer></script>
+  <script src="cart.js?v=3" defer></script>
+
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════ decorative particles -->
+  <div class="particles" aria-hidden="true"></div>
+
+  <!-- ═══════════════════════════════════════ CART TOGGLE BUTTON -->
+  <div class="cart-toggle" id="cart-toggle" onclick="toggleCart()" aria-label="Open cart">
+    🛍️
+    <span id="cart-count">0</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════ CART PANEL -->
+  <div id="cart-panel" class="cart-panel" aria-label="Shopping cart">
+    <div class="cart-header">
+      🛍️ <span>Your Bag</span>
+      <button class="cart-close-btn" onclick="toggleCart()" aria-label="Close cart">✕</button>
+    </div>
+    <div class="cart-items-container" id="cart-items"></div>
+    <div class="cart-footer">
+      <div class="cart-total-row">
+        <span class="cart-total-label">Total</span>
+        <span class="cart-total-amount" id="cart-total">₹0</span>
+      </div>
+      <button class="btn-proceed-buy" onclick="proceedToBuy()">Proceed to Buy →</button>
+    </div>
+  </div>
+  <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+
+  <!-- ═══════════════════════════════════════ LOGIN OVERLAY -->
+  <div class="login-overlay" id="login-overlay">
+    <div class="login-box">
+      <div class="login-logo">
+        <img src="static/images/logo.jpg" alt="Vinayaka Jewellary Logo" />
+      </div>
+      <h2>Welcome to VINAYAKA JEWELLARY</h2>
+      <p>Please log in or sign up to explore our premium try-on experience.</p>
+
+      <div class="login-tabs">
+        <button type="button" class="login-tab active" id="tab-signin" onclick="document.getElementById('login-form').action='/login'; document.getElementById('btn-login-submit').innerText='Sign In'; this.classList.add('active'); document.getElementById('tab-signup').classList.remove('active');">Sign In</button>
+        <button type="button" class="login-tab" id="tab-signup" onclick="document.getElementById('login-form').action='/register'; document.getElementById('btn-login-submit').innerText='Sign Up'; this.classList.add('active'); document.getElementById('tab-signin').classList.remove('active');">Sign Up</button>
+      </div>
+
+      <form class="login-form" id="login-form" method="POST" action="/login">
+        <input type="text" name="name" id="login-name" placeholder="Full Name" style="display: none;" />
+        <input type="text" name="email" placeholder="Email" required />
+        <input type="password" name="password" id="login-password" placeholder="Password" required />
+        <div id="login-error" style="display: none; color: #ff6b6b; font-size: 14px; margin-bottom: 15px; text-align: center;">Invalid credentials - Please try again</div>
+        <button type="submit" class="btn-login" id="btn-login-submit">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ HEADER -->
+  <header class="header">
+    <a href="#" class="logo" aria-label="VINAYAKA JEWELLARY Home">
+      <img src="static/images/logo.jpg" alt="Logo" class="logo-icon-img" />
+      <div>
+        <div class="logo-text">VINAYAKA JEWELLARY</div>
+        <div class="logo-sub">Virtual Jewelry</div>
+      </div>
+    </a>
+
+    <div class="mode-switcher" role="tablist" aria-label="View mode">
+      <button class="mode-btn active" data-mode="catalog" role="tab" aria-selected="true" id="tab-catalog">
+        <span>🛒</span> 2D Catalog
+      </button>
+      <button class="mode-btn" data-mode="explore" role="tab" aria-selected="false" id="tab-explore">
+        <span>✦</span> 3D Viewer
+      </button>
+      <button class="mode-btn" data-mode="tryon" role="tab" aria-selected="false" id="tab-tryon">
+        <span>◉</span> AI Try-On
+      </button>
+    </div>
+
+    <!-- ── Live Gold Rate Widget (top-right) ── -->
+    <div class="header-actions">
+      <div class="gold-rate-widget" id="gold-rate-widget" title="Live gold rate — updated daily">
+        <div class="gold-rate-icon">🪙</div>
+        <div class="gold-rate-info">
+          <div class="gold-rate-title">Gold Rate Today</div>
+          <div class="gold-rate-values" id="gold-rate-values">
+            <span class="gold-rate-loading">Fetching…</span>
+          </div>
+          <div class="gold-rate-meta" id="gold-rate-meta"></div>
+        </div>
+        <div class="gold-live-dot"></div>
+      </div>
+
+      <!-- Settings Dropdown -->
+      <div class="settings-dropdown">
+        <button class="settings-btn" id="settings-btn" aria-label="Settings">
+          <img src="static/images/logo.jpg" alt="Profile Logo" class="profile-logo" />
+        </button>
+        <div class="settings-menu" id="settings-menu">
+          <a href="#" class="settings-item" id="btn-profile">👤 Profile</a>
+          <a href="#" class="settings-item" id="btn-logout">🚪 Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════ MAIN LAYOUT -->
+  <main class="app-layout">
+
+    <!-- ─────────────────────── LEFT SIDEBAR ─────────────────────── -->
+    <aside class="sidebar-left" aria-label="Jewelry catalog">
+      
+      <div class="sidebar-header">
+        <div class="sidebar-title">Jewelry Collection</div>
+        <div class="sidebar-subtitle">Select a piece to preview</div>
+      </div>
+
+      <!-- Category tabs -->
+      <div class="category-tabs" role="tablist" aria-label="Jewelry categories">
+        <button class="cat-tab active" data-cat="earrings" role="tab">💎 Earrings</button>
+        <button class="cat-tab" data-cat="necklace" role="tab">📿 Necklace</button>
+        <button class="cat-tab" data-cat="rings" role="tab">💍 Rings</button>
+        <button class="cat-tab" data-cat="nosepin" role="tab">✦ Nosepin</button>
+      </div>
+
+      <!-- Jewelry item list -->
+      <div class="jewelry-list" id="jewelry-list" role="list" aria-label="Jewelry items"></div>
+    </aside>
+
+    <!-- ─────────────────────── CENTER VIEWER ────────────────────── -->
+    <section class="viewer-area" aria-label="Jewelry viewer">
+
+      <!-- ══════════════════════════════════════════════════════════
+           MODE 1 — 2D CATALOG (Images Only)
+           ══════════════════════════════════════════════════════════ -->
+      <div class="view-panel active" id="panel-catalog" role="tabpanel" aria-labelledby="tab-catalog">
+        <div class="catalog-header">
+          <h1>Premium Jewellery Catalogue</h1>
+          <p>Explore our exclusive collection of 2D jewellery designs</p>
+        </div>
+        
+        <div class="catalog-filters" id="catalog-filters">
+          <button class="filter-btn active" data-filter="all">All Designs</button>
+          <button class="filter-btn" data-filter="earrings">Earrings</button>
+          <button class="filter-btn" data-filter="necklace">Necklace</button>
+          <button class="filter-btn" data-filter="rings">Rings</button>
+          <button class="filter-btn" data-filter="nosepin">Nosepin</button>
+        </div>
+
+        <div class="catalog-grid" id="catalog-grid">
+          <!-- Product cards injected by JS: image, price, discount, wishlist icon -->
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           MODE 2 — 3D MODEL VIEWER (Three.js GLB — Independent)
+           ══════════════════════════════════════════════════════════ -->
+      <div class="view-panel" id="panel-explore" role="tabpanel" aria-labelledby="tab-explore">
+        <div class="viewer-3d-wrapper">
+          <canvas id="canvas-3d" aria-label="3D jewelry model viewer"></canvas>
+
+          <!-- Controls hint -->
+          <div class="viewer-controls" aria-hidden="true">
+            <span class="ctrl-hint">🖱 Drag to rotate</span>
+            <span class="ctrl-hint">⚲ Scroll to zoom</span>
+            <button class="autorotate-btn" id="btn-autorotate">⟳ Auto Rotate: ON</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════
+           MODE 3 — AI TRY-ON (MediaPipe + Camera — Independent)
+           ══════════════════════════════════════════════════════════ -->
+      <div class="view-panel" id="panel-tryon" role="tabpanel" aria-labelledby="tab-tryon">
+
+        <!-- ── Permission prompt / Launcher ── -->
+        <div class="tryon-wrapper" id="tryon-permission">
+          <div class="tryon-permission">
+            <div class="perm-icon" aria-hidden="true">◉</div>
+            <h3>AI Virtual Try-On</h3>
+            <p>Experience high-precision jewelry try-on using our advanced Computer Vision system with MediaPipe
+              FaceMesh and OpenCV.</p>
+
+            <!-- Desktop launcher (main.py) -->
+            <div class="tryon-launch-options">
+              <button class="btn-launch-python" id="btn-launch-python">
+                🚀 Launch AI Try-On (Desktop)
+              </button>
+              <div class="launcher-tip">Runs our professional main.py system with OpenCV + MediaPipe</div>
+            </div>
+
+            <!-- UI Preview -->
+            <div class="tryon-ui-preview">
+              <h4>Try-On Interface Preview</h4>
+              <div class="ui-layout-preview">
+                <div class="preview-left">
+                  <strong>LEFT PANEL</strong><br>
+                  Jewelry collection list<br>
+                  Golden Teardrop<br>
+                  Diamond Stud<br>
+                  Ruby Hoop<br>
+                  Sapphire Drop
+                </div>
+                <div class="preview-center">
+                  <strong>CENTER</strong><br>
+                  Camera view<br>
+                  (Sharp, clear, enhanced)
+                </div>
+                <div class="preview-right">
+                  <strong>RIGHT PANEL</strong><br>
+                  Product details<br>
+                  Name, Price, Material, Rating, Description
+                </div>
+              </div>
+              <div class="ui-features">
+                <div><strong>Jewellery Types:</strong> ☑ Earrings ☑ Necklace ☑ Nosepin</div>
+                <div><strong>Controls:</strong> Retake, Capture Photo, Download, Landmarks toggle</div>
+                <div><strong>Feedback:</strong> Perfect placement, Face detected, Move closer, Tilt detected</div>
+                <div><strong>Keyboard:</strong> 1-9 to switch design, ESC to exit</div>
+              </div>
+            </div>
+
+            <!-- Browser camera (experimental) -->
+            <div class="tryon-browser-option">
+              <div class="option-divider"><span>OR</span></div>
+              <button class="btn-enable-cam" id="btn-enable-cam">
+                📷 Enable Browser Camera (Experimental)
+              </button>
+              <div class="launcher-tip">In-browser try-on using WebGL + MediaPipe</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Live Try-On Content (Hidden initially) ── -->
+        <div class="tryon-content hidden" id="tryon-content">
+          <div class="tryon-main-view">
+
+            <!-- LEFT: Collection list -->
+            <div class="tryon-side-panel left">
+              <div class="side-panel-title">💎 Collection</div>
+              <div class="tryon-collection-list" id="tryon-collection-list">
+                <!-- dynamically populated -->
+              </div>
+            </div>
+
+            <!-- CENTER: Video + Canvas + HUD + Controls -->
+            <div class="tryon-video-container">
+              <video id="webcam-video" autoplay playsinline muted></video>
+              <canvas id="tryon-canvas"></canvas>
+              <canvas id="debug-landmark-canvas"
+                style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:5;"></canvas>
+
+              <!-- HUD Overlay -->
+              <div class="tryon-hud" id="tryon-hud">
+                <div class="hud-status">Initializing AI...</div>
+              </div>
+
+              <!-- Bottom Controls -->
+              <div class="tryon-bottom-bar">
+                <button class="tryon-ctrl-btn" id="btn-retake" title="Restart Camera" disabled>🔄 Retake</button>
+                <button class="tryon-ctrl-btn capture" id="btn-capture" title="Capture Photo" disabled>📸 Capture
+                </button>
+                <button class="tryon-ctrl-btn" id="btn-download" title="Download" disabled>⬇ Download</button>
+                <button class="tryon-ctrl-btn" id="btn-debug-landmarks" title="Toggle Landmarks">🎯 Landmarks
+                </button>
+              </div>
+            </div>
+
+            <!-- RIGHT: Options/Toggles -->
+            <div class="tryon-side-panel right">
+              <div class="side-panel-title">⚙ Jewellery Types</div>
+              <div class="toggle-group">
+                <label class="toggle-item">
+                  <input type="checkbox" id="toggle-earrings" checked>
+                  <span>💎 Earrings</span>
+                </label>
+                <label class="toggle-item">
+                  <input type="checkbox" id="toggle-necklace" checked>
+                  <span>📿 Necklace</span>
+                </label>
+                <label class="toggle-item">
+                  <input type="checkbox" id="toggle-nosepin" checked>
+                  <span>✦ Nosepin</span>
+                </label>
+              </div>
+
+              <div class="side-panel-title" style="margin-top: 20px;">☁ Effects</div>
+              <div class="toggle-group">
+                <button class="tryon-ctrl-btn active" id="btn-antigravity" title="Toggle Anti-Gravity">☁️ Anti-Gravity
+                </button>
+              </div>
+
+              <div class="side-panel-help">
+                <div class="help-title">⌨ Keyboard Shortcuts</div>
+                <p><kbd>1</kbd>-<kbd>9</kbd> Switch jewellery design</p>
+                <p><kbd>ESC</kbd> Exit camera</p>
+              </div>
+
+              <div class="side-panel-help">
+                <div class="help-title">📸 Camera Feedback</div>
+                <p>✅ Perfect placement</p>
+                <p>👤 Face detected</p>
+                <p>📏 Move closer to camera</p>
+                <p>↗ Tilt detected</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /panel-tryon -->
+
+    </section>
+
+    <!-- ─────────────────────── RIGHT SIDEBAR ────────────────────── -->
+    <aside class="sidebar-right" aria-label="Product details">
+
+      <!-- Product Hero -->
+      <div class="product-hero">
+        <div class="product-badge badge-gold" id="product-badge">
+          ◈ 18K Gold
+        </div>
+
+        <h2 class="product-name" id="product-name">Golden Teardrop</h2>
+
+        <!-- Rating -->
+        <div class="product-rating">
+          <div class="rating-stars" id="product-rating-stars" aria-hidden="true"></div>
+          <span class="rating-val" id="product-rating-val">4.8</span>
+          <span class="rating-ct" id="product-rating-ct">(312 reviews)</span>
+        </div>
+
+        <!-- Price -->
+        <div class="product-price-row">
+          <div class="product-price" id="product-price">$249</div>
+          <span class="product-tag">Free Shipping</span>
+        </div>
+      </div>
+
+      <!-- Specs -->
+      <div class="product-specs">
+        <div class="spec-title">Specifications</div>
+        <div class="spec-grid">
+          <div class="spec-item">
+            <div class="spec-label">Material</div>
+            <div class="spec-val" id="spec-material">18K Gold</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">Category</div>
+            <div class="spec-val" id="spec-category">Earrings</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">Price</div>
+            <div class="spec-val" id="spec-price">$249</div>
+          </div>
+          <div class="spec-item">
+            <div class="spec-label">SKU</div>
+            <div class="spec-val" id="spec-id">E1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="product-desc">
+        <div class="desc-title">About this piece</div>
+        <p class="desc-text" id="product-desc-text">
+          Elegant teardrop earrings crafted from solid 18K gold.
+        </p>
+      </div>
+
+      <!-- Color variants -->
+      <div class="product-colors">
+        <div class="color-dots" id="color-dots"></div>
+      </div>
+
+      <!-- CTA buttons -->
+      <div class="product-cta">
+        <button class="btn-cart" id="btn-cart" aria-label="Add to cart">
+          🛒 Add to Cart
+        </button>
+        <button class="btn-3d-tryon" id="btn-3d-tryon" aria-label="3D Try On">
+          ✨ Try On
+        </button>
+      </div>
+
+    </aside>
+
+  </main><!-- /app-layout -->
+
+  <!-- ═══════════════════════════════════════ CAPTURE MODAL -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-label="Captured photo">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>✦ Your Virtual Try-On</h3>
+        <button class="modal-close" id="modal-close" aria-label="Close modal">✕</button>
+      </div>
+      <div class="modal-image-wrap">
+        <img id="modal-img" src="" alt="Virtual jewelry try-on result" />
+        <div class="modal-stamp">VINAYAKA JEWELLARY Try-On</div>
+      </div>
+
+      <!-- User Rating Section -->
+      <div class="modal-rating-section">
+        <div class="rating-prompt">How does it look?</div>
+        <div class="rating-options">
+          <button class="rating-option" data-rating="fit" title="Perfect Fit">
+            <span class="rating-icon">✨</span>
+            <span class="rating-text">Perfect Fit</span>
+          </button>
+          <button class="rating-option" data-rating="elegant" title="Looks Elegant">
+            <span class="rating-icon">💎</span>
+            <span class="rating-text">Looks Elegant</span>
+          </button>
+          <button class="rating-option" data-rating="placement" title="Perfect Placement">
+            <span class="rating-icon">🎯</span>
+            <span class="rating-text">Perfect Placement</span>
+          </button>
+          <button class="rating-option" data-rating="hmm" title="Not Sure">
+            <span class="rating-icon">🤔</span>
+            <span class="rating-text">Not Sure</span>
+          </button>
+        </div>
+        <div class="rating-feedback" id="rating-feedback" style="display:none;">Thank you for rating!</div>
+      </div>
+
+      <!-- Image Enhancement Section -->
+      <div class="modal-enhancement-section">
+        <div class="enhancement-prompt">Enhance photo</div>
+        <div class="enhancement-options">
+          <button class="enhancement-btn" data-enhancement="light" title="Light Enhancement">
+            <span class="enh-icon">💡</span>
+            <span class="enh-text">Light</span>
+          </button>
+          <button class="enhancement-btn active" data-enhancement="standard" title="Standard Enhancement">
+            <span class="enh-icon">✨</span>
+            <span class="enh-text">Standard</span>
+          </button>
+          <button class="enhancement-btn" data-enhancement="glamour" title="Glamour Enhancement">
+            <span class="enh-icon">👑</span>
+            <span class="enh-text">Glamour</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-retake" id="modal-retake">↩ Retake</button>
+        <button class="btn-download" id="modal-download">↓ Download</button>
+        <button class="btn-share" id="modal-share">⇪ Share</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 3D Try On Launcher Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tryOnBtn = document.getElementById('btn-3d-tryon');
+      // Also attach to the desktop launcher button if it exists
+      const desktopLauncherBtn = document.getElementById('btn-launch-python');
+
+      const launchTryOn = async (btn) => {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Launching...';
+        btn.disabled = true;
+
+        try {
+          const response = await fetch('/start_tryon');
+          const data = await response.json();
+
+          if (response.ok) {
+            if (data.status === 'already_running') {
+              alert(data.message || 'AI Try-On is already running.');
+            }
+            btn.innerHTML = '✅ Launched';
+          } else {
+            alert('Camera failed: ' + (data.error || data.details || 'Unknown error'));
+            btn.innerHTML = originalText;
+          }
+        } catch (err) {
+          console.error('Launch error:', err);
+          alert('Failed to connect to server');
+          btn.innerHTML = originalText;
+        }
+
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }, 3000);
+      };
+
+      if (tryOnBtn) {
+        tryOnBtn.addEventListener('click', () => launchTryOn(tryOnBtn));
+      }
+
+      if (desktopLauncherBtn) {
+        desktopLauncherBtn.addEventListener('click', () => launchTryOn(desktopLauncherBtn));
+      }
+
+      // Login Logic
+      const loginOverlay = document.getElementById('login-overlay');
+      const loginForm = document.getElementById('login-form');
+      const tabSignIn = document.getElementById('tab-signin');
+      const tabSignUp = document.getElementById('tab-signup');
+      const loginName = document.getElementById('login-name');
+      const btnLoginSubmit = document.getElementById('btn-login-submit');
+
+      if (tabSignIn && tabSignUp) {
+        tabSignIn.addEventListener('click', () => {
+          tabSignIn.classList.add('active');
+          tabSignUp.classList.remove('active');
+          if (loginName) {
+            loginName.style.display = 'none';
+            loginName.removeAttribute('required');
+          }
+          btnLoginSubmit.textContent = 'Sign In';
+        });
+        tabSignUp.addEventListener('click', () => {
+          tabSignUp.classList.add('active');
+          tabSignIn.classList.remove('active');
+          if (loginName) {
+            loginName.style.display = 'block';
+            loginName.setAttribute('required', 'true');
+          }
+          btnLoginSubmit.textContent = 'Sign Up';
+        });
+      }
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('error')) {
+        const loginError = document.getElementById('login-error');
+        if (loginError) loginError.style.display = 'block';
+      }
+
+      // Settings Dropdown Logic
+      const settingsBtn = document.getElementById('settings-btn');
+      const settingsMenu = document.getElementById('settings-menu');
+      if (settingsBtn && settingsMenu) {
+        settingsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          settingsMenu.classList.toggle('active');
+        });
+        document.addEventListener('click', (e) => {
+          if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+            settingsMenu.classList.remove('active');
+          }
+        });
+      }
+
+      const btnLogout = document.getElementById('btn-logout');
+      if (btnLogout) {
+        btnLogout.addEventListener('click', (e) => {
+          e.preventDefault();
+          settingsMenu.classList.remove('active');
+          loginOverlay.classList.remove('hidden');
+          loginForm.reset();
+        });
+      }
+    });
+  </script>
+
+  <!-- ── Check User Session ── -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetch("/api/user")
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) {
+            document.getElementById("login-overlay").classList.add("hidden");
+            const profileBtn = document.getElementById("btn-profile");
+            if(profileBtn) profileBtn.innerHTML = `👤 ${data.user.split('@')[0]}`;
+          } else {
+            document.getElementById("login-overlay").classList.remove("hidden");
+          }
+        })
+        .catch(err => console.error("Session check failed"));
+    });
+  </script>
+</body>
+
+</html>
