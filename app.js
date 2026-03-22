@@ -1,6 +1,13 @@
 // app.js — Main orchestration layer (three independent modes)
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ══════════════════════════════════════════════════════════
+    // REPLIT BACKEND CONFIGURATION
+    // ══════════════════════════════════════════════════════════
+    // Replace this string with your actual Replit URL once deployed!
+    // Example: "https://my-backend.chirag.repl.co"
+    const BACKEND_URL = "https://your-replit-url-here.repl.co";
+
     // ── State ─────────────────────────────────────────────────
     let currentMode = 'catalog';   // 'catalog' | 'explore' | 'tryon'
     let currentItem = null;
@@ -102,15 +109,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { }
 
-        // Static gold rate for GitHub Pages (no backend available)
-        const staticData = {
-            rate_22k_per_gram: 6800,
-            rate_24k_per_gram: 7400,
-            usd_to_inr: 83.5,
-            date: new Date().toISOString().slice(0, 10)
-        };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(staticData));
-        applyGoldRate(staticData);
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/gold-rate`);
+            if (!res.ok) throw new Error('Network response was not ok');
+            const data = await res.json();
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            applyGoldRate(data);
+        } catch (err) {
+            console.warn('Gold rate fetch failed. Is Replit running? Using fallback.', err);
+            // Fallback so it doesn't break if Replit isn't running yet
+            const staticData = {
+                rate_22k_per_gram: 6800,
+                rate_24k_per_gram: 7400,
+                usd_to_inr: 83.5,
+                date: new Date().toISOString().slice(0, 10)
+            };
+            applyGoldRate(staticData);
+        }
     }
 
     function applyGoldRate(data) {
@@ -236,8 +251,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODE 3: AI TRY-ON — Python Launcher
     // ══════════════════════════════════════════════════════════
     if (btnLaunchPython) {
-        btnLaunchPython.addEventListener('click', () => {
-            alert('🖥️ Desktop AI Try-On requires the local backend server.\n\nTo use this feature:\n1. Run "python backend/app.py" on your computer\n2. Open http://localhost:5000 in your browser\n\nThe browser-based camera try-on below works without a backend!');
+        btnLaunchPython.addEventListener('click', async () => {
+            btnLaunchPython.textContent = '🚀 Launching...';
+            btnLaunchPython.disabled = true;
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/start-tryon`);
+                const data = await res.json();
+                
+                if (data.status === 'error') {
+                     alert(data.message);
+                } else {
+                     alert('Response from backend: ' + JSON.stringify(data));
+                }
+            } catch (err) {
+                console.error('Launch failed:', err);
+                alert('Could not connect to Replit backend. Is your Replit server running?');
+            } finally {
+                btnLaunchPython.textContent = '🚀 Launch AI Try-On (Desktop)';
+                btnLaunchPython.disabled = false;
+            }
         });
     }
 
