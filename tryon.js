@@ -124,7 +124,7 @@ class TryOnEngine {
     }
 
     // 4. Load 3D Jewelry Model Dynamically
-    setJewelry(item) {
+    setItem(item) {
         this.currentItem = item;
         
         // Clear old models
@@ -289,5 +289,17 @@ class TryOnEngine {
         link.download = 'my_jewelry_tryon.png';
         link.href = photoCanvas.toDataURL('image/png');
         link.click();
+    }
+
+    // Compatibility methods for app.js
+    setEnabledTypes(types) {
+        // Simplified version doesn't use multiple simultaneous types
+    }
+    
+    _setupKeyboardControls() {
+        // Basic keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.stopCamera();
+        });
     }
 }
