@@ -33,14 +33,20 @@ def get_gold_rate():
 
 import subprocess
 
-@app.route('/api/start-tryon', methods=['GET', 'OPTIONS'])
+@app.route('/api/start-tryon', methods=['GET'])
 def start_tryon():
-    # On Render, we cannot run a desktop GUI app (OpenCV cv2.imshow).
-    # Return a 200 OK with a helpful message instead of crashing or silently failing.
-    return jsonify({
-        "status": "info",
-        "message": "The system is running on a cloud server (Render). Please use the Browser Try-On option to use your webcam directly in the browser!"
-    }), 200
+    try:
+        # Launch the local Desktop OpenCV app in a non-blocking way
+        subprocess.Popen(['python', 'desktop_tryon.py'])
+        return jsonify({
+            "status": "success",
+            "message": "Desktop AI Try-On launched successfully! Please check your taskbar for the new window."
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to launch desktop try-on: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
     # host='0.0.0.0' is required for Replit/Render to expose the server to the web!

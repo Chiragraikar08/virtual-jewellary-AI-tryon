@@ -264,9 +264,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ══════════════════════════════════════════════════════════
-    // MODE 3: AI TRY-ON — Python Launcher Removed
+    // MODE 3: AI TRY-ON — Python Launcher
     // ══════════════════════════════════════════════════════════
-
+    if (btnLaunchPython) {
+        btnLaunchPython.addEventListener('click', async () => {
+            btnLaunchPython.textContent = '🚀 Launching...';
+            btnLaunchPython.disabled = true;
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/start-tryon`);
+                const data = await res.json();
+                
+                if (data.status === 'error') {
+                     alert(data.message);
+                } else {
+                     alert(data.message);
+                }
+            } catch (err) {
+                console.error('Launch failed:', err);
+                alert('Could not connect to Replit backend. Is your Replit server running?');
+            } finally {
+                btnLaunchPython.textContent = '🚀 Launch AI Try-On (Desktop)';
+                btnLaunchPython.disabled = false;
+            }
+        });
+    }
 
     // ── Auto-rotate toggle (3D Viewer only) ──────────────────
     if (autoRotateBtn) {
