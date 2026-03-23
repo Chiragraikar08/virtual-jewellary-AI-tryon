@@ -234,12 +234,19 @@
         <div class="sidebar-subtitle">Select a piece to preview</div>
       </div>
 
-      <!-- Category tabs -->
-      <div class="category-tabs" role="tablist" aria-label="Jewelry categories">
-        <button class="cat-tab active" data-cat="earrings" role="tab">💎 Earrings</button>
-        <button class="cat-tab" data-cat="necklace" role="tab">📿 Necklace</button>
-        <button class="cat-tab" data-cat="rings" role="tab">💍 Rings</button>
-        <button class="cat-tab" data-cat="nosepin" role="tab">✦ Nosepin</button>
+      <!-- Category Filter Dropdown -->
+      <div class="sidebar-filter-wrapper">
+        <label for="category-filter" style="display:none;">Filter by Category</label>
+        <div class="custom-select-wrapper">
+          <select id="category-filter" class="category-filter" aria-label="Category Filter">
+            <option value="all">💎 All Designs</option>
+            <option value="earrings" selected>✨ Earrings</option>
+            <option value="necklace">📿 Necklace</option>
+            <option value="rings">💍 Rings</option>
+            <option value="nosepin">✦ Nosepin</option>
+          </select>
+          <div class="select-arrow">▼</div>
+        </div>
       </div>
 
       <!-- Jewelry item list -->

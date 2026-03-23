@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ══════════════════════════════════════════════════════════
     // Replace this string with your actual Replit URL once deployed!
     // Example: "https://my-backend.chirag.repl.co"
-    const BACKEND_URL = "https://your-replit-url-here.repl.co";
+    const BACKEND_URL = "http://127.0.0.1:5000";
 
     // ── State ─────────────────────────────────────────────────
     let currentMode = 'catalog';   // 'catalog' | 'explore' | 'tryon'
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tryon: document.getElementById('panel-tryon'),
     };
     const modeBtns = document.querySelectorAll('.mode-btn');
-    const categoryTabs = document.querySelectorAll('.cat-tab');
+    const categoryFilter = document.getElementById('category-filter');
     const jewelryList = document.getElementById('jewelry-list');
     const autoRotateBtn = document.getElementById('btn-autorotate');
     const catalogGrid = document.getElementById('catalog-grid');
@@ -181,17 +181,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Kick off gold rate load
     initGoldRate();
 
-    // ── Category tab clicks ───────────────────────────────────
-    if (categoryTabs) {
-        categoryTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                categoryTabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                activeCategory = tab.dataset.cat;
-                renderCatalog(activeCategory);
+    // ── Category filter change ───────────────────────────────────
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', (e) => {
+            activeCategory = e.target.value;
+            renderCatalog(activeCategory);
+            
+            if (activeCategory === 'all') {
+                if (JEWELRY_CATALOG.length > 0) selectItem(JEWELRY_CATALOG[0]);
+            } else {
                 const first = JEWELRY_CATALOG.find(j => j.category === activeCategory);
                 if (first) selectItem(first);
-            });
+            }
         });
     }
 
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.status === 'error') {
                      alert(data.message);
                 } else {
-                     alert('Response from backend: ' + JSON.stringify(data));
+                     alert(data.message);
                 }
             } catch (err) {
                 console.error('Launch failed:', err);
@@ -368,7 +369,10 @@ document.addEventListener('DOMContentLoaded', () => {
         jewelryList.innerHTML = '';
         if (typeof JEWELRY_CATALOG === 'undefined') return;
 
-        const items = JEWELRY_CATALOG.filter(j => j.category === cat);
+        const items = cat === 'all' 
+            ? JEWELRY_CATALOG 
+            : JEWELRY_CATALOG.filter(j => j.category === cat);
+            
         items.forEach(item => {
             const card = document.createElement('div');
             card.className = 'jewelry-card' + (currentItem?.id === item.id ? ' active' : '');
