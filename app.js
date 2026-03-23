@@ -264,46 +264,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ══════════════════════════════════════════════════════════
-    // MODE 3: AI TRY-ON — Python Launcher
+    // MODE 3: AI TRY-ON — Python Launcher Removed
     // ══════════════════════════════════════════════════════════
-    if (btnLaunchPython) {
-        btnLaunchPython.addEventListener('click', async () => {
-            const originalText = btnLaunchPython.innerHTML;
-            btnLaunchPython.innerHTML = '<span class="tryon-analyzing-spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;margin-right:8px;vertical-align:middle;"></span> Launching...';
-            btnLaunchPython.disabled = true;
-            try {
-                const res = await fetch(`${BACKEND_URL}/api/start-tryon`);
-                const data = await res.json();
-                
-                // Show in-page status instead of ugly alert if possible
-                const launcherContainer = document.querySelector('.tryon-launch-options');
-                if (launcherContainer) {
-                    let alertBox = document.getElementById('launcher-alert');
-                    if (!alertBox) {
-                        alertBox = document.createElement('div');
-                        alertBox.id = 'launcher-alert';
-                        alertBox.style.cssText = 'margin-top: 10px; padding: 12px; border-radius: 8px; font-size: 13px; text-align: left; background: rgba(255,170,0,0.15); border: 1px solid rgba(255,170,0,0.5); color: #ffeebb;';
-                        launcherContainer.appendChild(alertBox);
-                    }
-                    alertBox.innerHTML = `<strong>Notice:</strong> ${data.message || 'The desktop app cannot be launched from the cloud server. Please use the browser camera option below.'}`;
-                    
-                    // Highlight the browser button
-                    if (btnEnableCam) {
-                        btnEnableCam.style.boxShadow = '0 0 15px #d4a847';
-                        setTimeout(() => btnEnableCam.style.boxShadow = '', 3000);
-                    }
-                } else {
-                    alert(data.message);
-                }
-            } catch (err) {
-                console.error('Launch failed:', err);
-                alert('Could not connect to the backend server. It may be sleeping, please wait a moment and try again.');
-            } finally {
-                btnLaunchPython.innerHTML = originalText;
-                btnLaunchPython.disabled = false;
-            }
-        });
-    }
+
 
     // ── Auto-rotate toggle (3D Viewer only) ──────────────────
     if (autoRotateBtn) {

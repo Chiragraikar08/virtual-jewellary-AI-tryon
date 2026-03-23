@@ -304,55 +304,14 @@
           <div class="tryon-permission">
             <div class="perm-icon" aria-hidden="true">◉</div>
             <h3>AI Virtual Try-On</h3>
-            <p>Experience high-precision jewelry try-on using our advanced Computer Vision system with MediaPipe
-              FaceMesh and OpenCV.</p>
+            <p>Experience high-precision jewelry try-on using advanced Computer Vision (MediaPipe FaceMesh + WebGL) directly in your browser.</p>
 
-            <!-- Desktop launcher (main.py) -->
-            <div class="tryon-launch-options">
-              <button class="btn-launch-python" id="btn-launch-python">
-                🚀 Launch AI Try-On (Desktop)
+            <!-- Browser camera (Primary) -->
+            <div class="tryon-browser-option" style="margin-top: 30px;">
+              <button class="btn-enable-cam" id="btn-enable-cam" style="font-size: 16px; padding: 15px 30px;">
+                📷 Start Browser Try-On
               </button>
-              <div class="launcher-tip">Runs our professional main.py system with OpenCV + MediaPipe</div>
-            </div>
-
-            <!-- UI Preview -->
-            <div class="tryon-ui-preview">
-              <h4>Try-On Interface Preview</h4>
-              <div class="ui-layout-preview">
-                <div class="preview-left">
-                  <strong>LEFT PANEL</strong><br>
-                  Jewelry collection list<br>
-                  Golden Teardrop<br>
-                  Diamond Stud<br>
-                  Ruby Hoop<br>
-                  Sapphire Drop
-                </div>
-                <div class="preview-center">
-                  <strong>CENTER</strong><br>
-                  Camera view<br>
-                  (Sharp, clear, enhanced)
-                </div>
-                <div class="preview-right">
-                  <strong>RIGHT PANEL</strong><br>
-                  Product details<br>
-                  Name, Price, Material, Rating, Description
-                </div>
-              </div>
-              <div class="ui-features">
-                <div><strong>Jewellery Types:</strong> ☑ Earrings ☑ Necklace ☑ Nosepin</div>
-                <div><strong>Controls:</strong> Retake, Capture Photo, Download, Landmarks toggle</div>
-                <div><strong>Feedback:</strong> Perfect placement, Face detected, Move closer, Tilt detected</div>
-                <div><strong>Keyboard:</strong> 1-9 to switch design, ESC to exit</div>
-              </div>
-            </div>
-
-            <!-- Browser camera (experimental) -->
-            <div class="tryon-browser-option">
-              <div class="option-divider"><span>OR</span></div>
-              <button class="btn-enable-cam" id="btn-enable-cam">
-                📷 Enable Browser Camera (Experimental)
-              </button>
-              <div class="launcher-tip">In-browser try-on using WebGL + MediaPipe</div>
+              <div class="launcher-tip" style="margin-top: 15px;">No backend required. Runs entirely on your device for maximum privacy.</div>
             </div>
           </div>
         </div>
