@@ -2,11 +2,12 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // ══════════════════════════════════════════════════════════
-    // REPLIT BACKEND CONFIGURATION
+    // BACKEND CONFIGURATION
     // ══════════════════════════════════════════════════════════
-    // Replace this string with your actual Replit URL once deployed!
-    // Example: "https://my-backend.chirag.repl.co"
-    const BACKEND_URL = "http://127.0.0.1:5000";
+    // ⚠️ AFTER deploying backend to Render, replace the URL below with your Render URL.
+    // Example: "https://virtual-jewellary-api.onrender.com"
+    // For local development, use: "http://127.0.0.1:5000"
+    const BACKEND_URL = "https://virtual-jewellary-api.onrender.com";
 
     // ── State ─────────────────────────────────────────────────
     let currentMode = 'catalog';   // 'catalog' | 'explore' | 'tryon'
