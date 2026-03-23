@@ -11,9 +11,14 @@ CORS(app)
 def home():
     return jsonify({
         "status": "success",
-        "message": "Welcome to the Vinayaka Jewellers Backend API on Replit!",
-        "endpoints": ["/api/gold-rate"]
+        "message": "Welcome to the Vinayaka Jewellers Backend API on Render!",
+        "endpoints": ["/api/gold-rate", "/api/ping"]
     })
+
+@app.route('/api/ping', methods=['GET', 'OPTIONS'])
+def ping():
+    # Silent wake-up endpoint for Render cold starts
+    return jsonify({"status": "ok"}), 200
 
 @app.route('/api/gold-rate', methods=['GET'])
 def get_gold_rate():
@@ -28,20 +33,14 @@ def get_gold_rate():
 
 import subprocess
 
-@app.route('/api/start-tryon', methods=['GET'])
+@app.route('/api/start-tryon', methods=['GET', 'OPTIONS'])
 def start_tryon():
-    try:
-        # Launch the local Desktop OpenCV app in a non-blocking way
-        subprocess.Popen(['python', 'desktop_tryon.py'])
-        return jsonify({
-            "status": "success",
-            "message": "Desktop AI Try-On launched successfully! Please check your taskbar for the new window."
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": f"Failed to launch desktop try-on: {str(e)}"
-        }), 500
+    # On Render, we cannot run a desktop GUI app (OpenCV cv2.imshow).
+    # Return a 200 OK with a helpful message instead of crashing or silently failing.
+    return jsonify({
+        "status": "info",
+        "message": "The system is running on a cloud server (Render). Please use the Browser Try-On option to use your webcam directly in the browser!"
+    }), 200
 
 if __name__ == '__main__':
     # host='0.0.0.0' is required for Replit/Render to expose the server to the web!

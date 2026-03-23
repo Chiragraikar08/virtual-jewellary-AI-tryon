@@ -7,7 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ⚠️ AFTER deploying backend to Render, replace the URL below with your Render URL.
     // Example: "https://virtual-jewellary-api.onrender.com"
     // For local development, use: "http://127.0.0.1:5000"
-    const BACKEND_URL = "https://virtual-jewellary-api.onrender.com";
+    const BACKEND_URL = "https://virtual-jewellary-ai-tryon.onrender.com";
+
+    // ── Wake Up Render Server (Cold-Start Ping) ───────────────
+    // Render free tier sleeps after 15 minutes of inactivity.
+    // We send a silent background request immediately on page load to wake it up.
+    fetch(`${BACKEND_URL}/api/ping`).catch(e => console.warn('Ping failed - server might be sleeping.'));
 
     // ── State ─────────────────────────────────────────────────
     let currentMode = 'catalog';   // 'catalog' | 'explore' | 'tryon'
@@ -101,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initGoldRate() {
         const CACHE_KEY = 'goldRate_v2';
         const todayKey = new Date().toISOString().slice(0, 10);
+        const valEl = document.getElementById('gold-rate-values');
 
         try {
             const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
@@ -110,15 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) { }
 
+        // Setting a friendly loading message
+        if (valEl) {
+            valEl.innerHTML = '<span class="gold-rate-loading">⏳ Waking up server...</span>';
+        }
+
         try {
             const res = await fetch(`${BACKEND_URL}/api/gold-rate`);
-            if (!res.ok) throw new Error('Network response was not ok');
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
             applyGoldRate(data);
         } catch (err) {
-            console.warn('Gold rate fetch failed. Is Replit running? Using fallback.', err);
-            // Fallback so it doesn't break if Replit isn't running yet
+            console.warn('Gold rate fetch failed. Is Render sleeping?', err);
+            // Fallback so the user isn't stuck waiting forever
             const staticData = {
                 rate_22k_per_gram: 6800,
                 rate_24k_per_gram: 7400,
@@ -126,6 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 date: new Date().toISOString().slice(0, 10)
             };
             applyGoldRate(staticData);
+            if (valEl) {
+                valEl.innerHTML += ' <span style="font-size: 8px; color: #ffaa00;">(Cached)</span>';
+            }
         }
     }
 
@@ -254,22 +268,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // ══════════════════════════════════════════════════════════
     if (btnLaunchPython) {
         btnLaunchPython.addEventListener('click', async () => {
-            btnLaunchPython.textContent = '🚀 Launching...';
+            const originalText = btnLaunchPython.innerHTML;
+            btnLaunchPython.innerHTML = '<span class="tryon-analyzing-spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;margin-right:8px;vertical-align:middle;"></span> Launching...';
             btnLaunchPython.disabled = true;
             try {
                 const res = await fetch(`${BACKEND_URL}/api/start-tryon`);
                 const data = await res.json();
                 
-                if (data.status === 'error') {
-                     alert(data.message);
+                // Show in-page status instead of ugly alert if possible
+                const launcherContainer = document.querySelector('.tryon-launch-options');
+                if (launcherContainer) {
+                    let alertBox = document.getElementById('launcher-alert');
+                    if (!alertBox) {
+                        alertBox = document.createElement('div');
+                        alertBox.id = 'launcher-alert';
+                        alertBox.style.cssText = 'margin-top: 10px; padding: 12px; border-radius: 8px; font-size: 13px; text-align: left; background: rgba(255,170,0,0.15); border: 1px solid rgba(255,170,0,0.5); color: #ffeebb;';
+                        launcherContainer.appendChild(alertBox);
+                    }
+                    alertBox.innerHTML = `<strong>Notice:</strong> ${data.message || 'The desktop app cannot be launched from the cloud server. Please use the browser camera option below.'}`;
+                    
+                    // Highlight the browser button
+                    if (btnEnableCam) {
+                        btnEnableCam.style.boxShadow = '0 0 15px #d4a847';
+                        setTimeout(() => btnEnableCam.style.boxShadow = '', 3000);
+                    }
                 } else {
-                     alert(data.message);
+                    alert(data.message);
                 }
             } catch (err) {
                 console.error('Launch failed:', err);
-                alert('Could not connect to Replit backend. Is your Replit server running?');
+                alert('Could not connect to the backend server. It may be sleeping, please wait a moment and try again.');
             } finally {
-                btnLaunchPython.textContent = '🚀 Launch AI Try-On (Desktop)';
+                btnLaunchPython.innerHTML = originalText;
                 btnLaunchPython.disabled = false;
             }
         });

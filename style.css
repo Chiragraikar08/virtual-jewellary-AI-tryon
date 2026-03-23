@@ -301,8 +301,29 @@ body {
 
 .gold-rate-loading {
   font-size: 11px;
-  color: var(--text-muted);
-  font-style: italic;
+  color: var(--gold-light);
+  font-weight: 500;
+  animation: pulse-op 1.5s infinite;
+}
+
+@keyframes pulse-op {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.tryon-analyzing-spinner {
+    border: 3px solid rgba(212, 168, 71, 0.25);
+    border-top: 3px solid #d4a847;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .gold-rate-chip {
