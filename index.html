@@ -145,11 +145,11 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <!-- Custom scripts with cache busting -->
-  <script src="jewelry-data.js?v=13" defer></script>
-  <script src="app.js?v=13" defer></script>
-  <script src="viewer3d.js?v=13" defer></script>
-  <script src="tryon.js?v=13" defer></script>
-  <script src="cart.js?v=5" defer></script>
+  <script src="jewelry-data.js?v=20" defer></script>
+  <script src="app.js?v=20" defer></script>
+  <script src="viewer3d.js?v=20" defer></script>
+  <script src="tryon.js?v=20" defer></script>
+  <script src="cart.js?v=20" defer></script>
 
 </head>
 
@@ -566,6 +566,9 @@
         <button class="btn-cart" id="btn-cart" aria-label="Add to cart">
           🛒 Add to Cart
         </button>
+        <button class="btn-buy-now" id="btn-sidebar-buy-now" aria-label="Buy Now" style="background:var(--gold); color:#000;">
+          💳 Buy Now
+        </button>
         <button class="btn-3d-tryon" id="btn-3d-tryon" aria-label="3D Try On">
           ✨ Try On
         </button>
@@ -790,6 +793,71 @@
       }
     });
   </script>
+
+  <!-- ═══════════════════════════════════════ BILLING INVOICE MODAL -->
+  <div class="modal-overlay hidden" id="invoice-modal-overlay" role="dialog" aria-modal="true" aria-label="Billing Invoice">
+    <div class="modal-box invoice-box" style="width: 500px; max-width: 90vw; background: #fff; color: #333; font-family: 'Inter', sans-serif;">
+      
+      <!-- Invoice Header -->
+      <div style="text-align:center; padding-bottom: 15px; border-bottom: 2px solid #ddd;">
+        <h2 style="margin:0; font-size: 24px; color: #111; letter-spacing: 1px;">VINAYAKA JEWELLERS</h2>
+        <div style="font-size: 11px; color: #666; margin-top: 5px;">EST. 1995 • Premium Fine Jewelry</div>
+        <div style="font-size: 13px; color: #444; margin-top: 10px; display: flex; justify-content: space-between;">
+          <span><strong>Date:</strong> <span id="invoice-date"></span></span>
+          <span><strong>Invoice #:</strong> <span id="invoice-number"></span></span>
+        </div>
+      </div>
+
+      <!-- Item Details -->
+      <div style="margin: 20px 0;">
+        <h4 style="margin: 0 0 10px 0; color: #111; border-bottom: 1px solid #eee; padding-bottom: 5px;">Item Details</h4>
+        <div style="display:flex; justify-content:space-between; margin-bottom: 5px; font-size: 14px;">
+          <span style="font-weight: 600; color: #222;" id="invoice-item-name"></span>
+          <span style="color: #555;" id="invoice-item-sku"></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size: 13px; color: #555; margin-bottom: 5px;">
+          <span>Material: <span id="invoice-item-material"></span></span>
+          <span><span id="invoice-item-weight"></span>g @ <span id="invoice-item-touch"></span>% Purity</span>
+        </div>
+      </div>
+
+      <!-- Cost Breakdown Table -->
+      <div style="margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tbody>
+            <tr style="border-bottom: 1px dashed #ccc;">
+              <td style="padding: 8px 0; color: #444;">Live Gold Value (24K Index)</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 500;" id="invoice-base-price"></td>
+            </tr>
+            <tr style="border-bottom: 1px dashed #ccc;">
+              <td style="padding: 8px 0; color: #444;">Making Charges (15%)</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 500;" id="invoice-making-charges"></td>
+            </tr>
+            <tr style="border-bottom: 1px solid #aaa;">
+              <td style="padding: 8px 0; color: #111; font-weight: 600;">Subtotal</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 600;" id="invoice-subtotal"></td>
+            </tr>
+            <tr style="border-bottom: 2px solid #333;">
+              <td style="padding: 8px 0; color: #444;">Estimated GST (3%)</td>
+              <td style="padding: 8px 0; text-align: right; font-weight: 500;" id="invoice-gst"></td>
+            </tr>
+            <tr>
+              <td style="padding: 15px 0; color: #000; font-weight: 800; font-size: 18px;">GRAND TOTAL</td>
+              <td style="padding: 15px 0; text-align: right; color: #000; font-weight: 800; font-size: 20px; color: #b8860b;" id="invoice-grand-total"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Actions (Hidden during print) -->
+      <div class="invoice-actions" style="margin-top: 25px; display: flex; gap: 10px; justify-content: flex-end;">
+         <button class="btn-card-action" id="btn-close-invoice" style="background:#f1f1f1; color:#333; border: 1px solid #ccc;">Cancel</button>
+         <button class="btn-card-action" onclick="window.print()" style="background:#333; color:#fff;">Print / PDF</button>
+         <button class="btn-card-action primary" id="btn-confirm-purchase" style="background:var(--gold); color:#000; font-weight: bold;">Confirm Purchase</button>
+      </div>
+
+    </div>
+  </div>
 </body>
 
 </html>

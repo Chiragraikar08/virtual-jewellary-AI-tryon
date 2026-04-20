@@ -3458,4 +3458,38 @@ body {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(212,168,71,0.3);
 }
+
+/* ── Billing Invoice CSS ────────────────────────────────────── */
+.invoice-box {
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #invoice-modal-overlay,
+  #invoice-modal-overlay * {
+    visibility: visible;
+  }
+  #invoice-modal-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff;
+  }
+  .invoice-box {
+    box-shadow: none;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0;
+    border: none;
+  }
+  .invoice-actions {
+    display: none !important;
+  }
+}
 

@@ -100,18 +100,7 @@ function loadCart() {
     }
 }
 
-// ── Buy Now ────────────────────────────────────────────────────
-function buyNow(item) {
-    if (typeof item === 'string') {
-        const found = typeof JEWELRY_CATALOG !== 'undefined'
-            ? JEWELRY_CATALOG.find(j => j.id === item) : null;
-        if (!found) return;
-        localStorage.setItem("selectedProduct", JSON.stringify(found));
-    } else {
-        localStorage.setItem("selectedProduct", JSON.stringify(item));
-    }
-    window.location.href = "/checkout";
-}
+// ── Buy Now handled globally by app.js ──────────────────────
 
 // ── Proceed to Buy (from cart footer) ─────────────────────────
 function proceedToBuy() {
@@ -120,9 +109,11 @@ function proceedToBuy() {
         showCartToast('Your bag is empty!');
         return;
     }
-    // Use the first item in cart as the "selected product" for checkout
-    localStorage.setItem("selectedProduct", JSON.stringify(freshCart[0]));
-    window.location.href = "/checkout";
+    // Trigger the invoice modal using the first item in the cart
+    if (window.buyNow) {
+        window.buyNow(freshCart[0].id);
+        toggleCart(); // Close the cart overlay
+    }
 }
 
 // ── Toast Notification ─────────────────────────────────────────

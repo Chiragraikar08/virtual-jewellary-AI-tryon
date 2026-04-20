@@ -133,12 +133,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3) Build unified list: catalog items first, then new dynamic-only models
+        const allowedGLBs = ['earing4.glb', 'earing2.glb', 'earring.glb', 'earring3.glb'];
         const catalogItems = (typeof JEWELRY_CATALOG !== 'undefined')
-            ? JEWELRY_CATALOG.filter(j => j.glbFile && j.glbFile.trim() !== '')
+            ? JEWELRY_CATALOG.filter(j => j.glbFile && allowedGLBs.includes(j.glbFile))
             : [];
 
         // Dynamic models not in catalog
-        const extraModels = serverModels.filter(m => !catalogGlbNames.has(m.filename));
+        const extraModels = []; // Disabled to remove extra files taking up space
 
         // Convert extra models to pseudo-catalog items so selectItem/viewer.loadJewelry works
         const dynamicItems = extraModels.map(m => {
@@ -219,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="card-material">${item.material}</div>
           ${item.rating > 0 ? `<div class="card-stars">${stars}</div>` : sizeLabel}
         </div>
-        ${item.price !== '—' ? `<div class="card-price">${formatINR(item.price)}</div>` : '<div class="card-price" style="color:var(--text-muted);font-size:11px">3D Model</div>'}
+        ${item.price !== '—' ? `<div class="card-price">${formatINRDirect(getItemPriceINR(item))}</div>` : '<div class="card-price" style="color:var(--text-muted);font-size:11px">3D Model</div>'}
       `;
 
             card.addEventListener('click', () => selectItem(item));
@@ -577,6 +578,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // ── Billing Invoice Logic ──────────────────────────────────────────
+    window.buyNow = (id) => {
+        const item = JEWELRY_CATALOG.find(j => j.id === id) || currentItem;
+        if (!item) return;
+        
+        let weight = item.weight || 15.0; 
+        let touch = item.touch || 91.6;
+        let baseGoldValue = weight * (touch / 100) * currentGoldRate24K;
+        
+        // Hardcode fallback if item.price exists and isn't based on touch/weight
+        if(!item.weight && item.price) {
+            const pStr = String(item.price);
+            let num = parseFloat(pStr.replace(/[^0-9.]/g, '')) || 0;
+            if(!pStr.includes('Rs') && !pStr.includes('₹')) num *= usdToInr;
+            baseGoldValue = num / 1.15;
+            weight = '-'; touch = '-';
+        }
+
+        const makingCharges = baseGoldValue * 0.15;
+        const subtotal = baseGoldValue + makingCharges;
+        const gst = subtotal * 0.03;
+        const grandTotal = subtotal + gst;
+
+        document.getElementById('invoice-date').textContent = new Date().toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
+        document.getElementById('invoice-number').textContent = 'INV-' + Math.floor(100000 + Math.random() * 900000);
+        
+        document.getElementById('invoice-item-name').textContent = item.name;
+        document.getElementById('invoice-item-sku').textContent = item.id.toUpperCase();
+        document.getElementById('invoice-item-material').textContent = item.material;
+        document.getElementById('invoice-item-weight').textContent = typeof weight === 'number' ? weight.toFixed(1) : weight;
+        document.getElementById('invoice-item-touch').textContent = touch;
+
+        document.getElementById('invoice-base-price').textContent = formatINRDirect(baseGoldValue);
+        document.getElementById('invoice-making-charges').textContent = '+ ' + formatINRDirect(makingCharges);
+        document.getElementById('invoice-subtotal').textContent = formatINRDirect(subtotal);
+        document.getElementById('invoice-gst').textContent = '+ ' + formatINRDirect(gst);
+        document.getElementById('invoice-grand-total').textContent = formatINRDirect(grandTotal);
+
+        const overlay = document.getElementById('invoice-modal-overlay');
+        if(overlay) overlay.classList.remove('hidden');
+    };
+
+    const btnSidebarBuyNow = document.getElementById('btn-sidebar-buy-now');
+    if (btnSidebarBuyNow) {
+        btnSidebarBuyNow.addEventListener('click', () => {
+            if (currentItem) window.buyNow(currentItem.id);
+        });
+    }
+
+    const closeInvoiceBtn = document.getElementById('btn-close-invoice');
+    const invoiceOverlay = document.getElementById('invoice-modal-overlay');
+    if(closeInvoiceBtn && invoiceOverlay) {
+        closeInvoiceBtn.addEventListener('click', () => {
+            invoiceOverlay.classList.add('hidden');
+        });
+        invoiceOverlay.addEventListener('click', (e) => {
+            if(e.target === invoiceOverlay) invoiceOverlay.classList.add('hidden');
+        });
+    }
+
+    const btnConfirmPurchase = document.getElementById('btn-confirm-purchase');
+    if(btnConfirmPurchase && invoiceOverlay) {
+        btnConfirmPurchase.addEventListener('click', () => {
+            alert('Purchase Confirmed! Thank you for shopping with Vinayaka Jewellers.');
+            invoiceOverlay.classList.add('hidden');
+        });
+    }
+
     // ── Sidebar Catalog rendering (Left Panel — 3D Viewer) ────────────────
     function renderCatalog(cat) {
         if (!jewelryList) return;
@@ -584,7 +653,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof JEWELRY_CATALOG === 'undefined') return;
 
         // Show ALL items that have a GLB file — these are 3D Viewer designs
-        const glbItems = JEWELRY_CATALOG.filter(j => j.glbFile && j.glbFile.trim() !== '');
+        const allowedGLBs = ['earing4.glb', 'earing2.glb', 'earring.glb', 'earring3.glb'];
+        const glbItems = JEWELRY_CATALOG.filter(j => j.glbFile && allowedGLBs.includes(j.glbFile));
 
         const items = cat === 'all'
             ? glbItems
