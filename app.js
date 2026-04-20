@@ -2,12 +2,11 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // ══════════════════════════════════════════════════════════
-    // BACKEND CONFIGURATION
-    // ══════════════════════════════════════════════════════════
+    // API configuration
     // ⚠️ AFTER deploying backend to Render, replace the URL below with your Render URL.
     // Example: "https://virtual-jewellary-api.onrender.com"
     // For local development, use: "http://127.0.0.1:5000"
-    const BACKEND_URL = "https://virtual-jewellary-ai-tryon.onrender.com";
+    const BACKEND_URL = "http://127.0.0.1:5000";
 
     // ── Wake Up Render Server (Cold-Start Ping) ───────────────
     // Render free tier sleeps after 15 minutes of inactivity.
@@ -39,11 +38,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCapture = document.getElementById('btn-capture');
     const btnRetake = document.getElementById('btn-retake');
     const btnDownload = document.getElementById('btn-download');
+    const btnUpload = document.getElementById('btn-upload');
+    const uploadInput = document.getElementById('tryon-upload-input');
     const webcamVideo = document.getElementById('webcam-video');
     const tryonCanvas = document.getElementById('tryon-canvas');
     const tryonContent = document.getElementById('tryon-content');
     const tryonPermission = document.getElementById('tryon-permission');
     const hudEl = document.getElementById('tryon-hud');
+    const tryonCollectionList = document.getElementById('tryon-collection-list');
+    const tryonSearch = document.getElementById('tryon-search');
+    const tryonCatFilter = document.getElementById('tryon-category-filter');
+    const tryonPriceFilter = document.getElementById('tryon-price-filter');
 
     // Modal
     const modalOverlay = document.getElementById('modal-overlay');
@@ -79,12 +84,152 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── 3D Viewer — deferred init (canvas must be visible) ────
     const canvas3d = document.getElementById('canvas-3d');
+    let dynamicModelsLoaded = false;   // track if we've fetched /api/get_models
+    let dynamicModelsList = [];         // models discovered from static/models/
+
     function initViewer() {
         if (viewerInitialized || !canvas3d) return;
         viewerInitialized = true;
         viewer = new JewelryViewer(canvas3d);
         // Load current item into viewer
         if (currentItem) viewer.loadJewelry(currentItem);
+    }
+
+    // ── Dynamic GLB Model Fetcher (for 3D Viewer ONLY) ───────
+    async function fetchDynamicModels() {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/get_models`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.status === 'success' && Array.isArray(data.models)) {
+                dynamicModelsList = data.models;
+                dynamicModelsLoaded = true;
+                console.log(`[3D Viewer] Discovered ${data.count} GLB models from server`);
+            }
+        } catch (err) {
+            console.warn('[3D Viewer] Could not fetch dynamic models:', err.message);
+        }
+        return dynamicModelsList;
+    }
+
+    /**
+     * Render the 3D Viewer sidebar with BOTH catalog items AND dynamically-discovered GLB models.
+     * Any .glb in static/models/ that is NOT already in JEWELRY_CATALOG gets listed too.
+     * This is 3D Viewer ONLY — AI Try-On is not affected.
+     */
+    async function renderExplore3DModels(cat) {
+        if (!jewelryList) return;
+        jewelryList.innerHTML = '';
+
+        // 1) Fetch dynamic models from backend
+        const serverModels = await fetchDynamicModels();
+
+        // 2) Collect filenames from JEWELRY_CATALOG that have glbFile
+        const catalogGlbNames = new Set();
+        if (typeof JEWELRY_CATALOG !== 'undefined') {
+            JEWELRY_CATALOG.forEach(j => {
+                if (j.glbFile) catalogGlbNames.add(j.glbFile);
+            });
+        }
+
+        // 3) Build unified list: catalog items first, then new dynamic-only models
+        const catalogItems = (typeof JEWELRY_CATALOG !== 'undefined')
+            ? JEWELRY_CATALOG.filter(j => j.glbFile && j.glbFile.trim() !== '')
+            : [];
+
+        // Dynamic models not in catalog
+        const extraModels = serverModels.filter(m => !catalogGlbNames.has(m.filename));
+
+        // Convert extra models to pseudo-catalog items so selectItem/viewer.loadJewelry works
+        const dynamicItems = extraModels.map(m => {
+            // Guess category from filename
+            let category = 'other';
+            const fname = m.filename.toLowerCase();
+            if (fname.includes('earring') || fname.includes('earing')) category = 'earrings';
+            else if (fname.includes('necklace')) category = 'necklace';
+            else if (fname.includes('ring')) category = 'rings';
+            else if (fname.includes('nosepin') || fname.includes('nose')) category = 'nosepin';
+            else if (fname.includes('bracelet')) category = 'bracelet';
+
+            const typeMap = { earrings: 'earring', necklace: 'necklace', rings: 'ring', nosepin: 'nosepin', bracelet: 'bracelet', other: 'ring' };
+
+            return {
+                id: 'dyn_' + m.filename.replace(/[^a-zA-Z0-9]/g, '_'),
+                name: m.name,
+                category: category,
+                type: typeMap[category] || 'ring',
+                glbFile: m.filename,
+                image: '',
+                color: '#d4a847',
+                gemColor: null,
+                metalness: 0.9,
+                roughness: 0.15,
+                price: '—',
+                rating: 0,
+                ratingCount: 0,
+                material: 'Premium Metal',
+                description: `Dynamically loaded 3D model: ${m.filename}`,
+                tags: ['3d', 'dynamic'],
+                _dynamic: true,
+                _sizeBytes: m.size_bytes,
+            };
+        });
+
+        // Merge
+        let allItems = [...catalogItems, ...dynamicItems];
+
+        // Filter by category if needed
+        if (cat && cat !== 'all') {
+            allItems = allItems.filter(j => j.category === cat);
+        }
+
+        // 4) Render cards
+        allItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'jewelry-card' + (currentItem?.id === item.id ? ' active' : '');
+            card.dataset.id = item.id;
+
+            const previewBg = item.gemColor
+                ? `linear-gradient(135deg, ${item.color}55 0%, ${item.gemColor}44 100%)`
+                : `linear-gradient(135deg, ${item.color}44 0%, ${item.color}22 100%)`;
+
+            const stars = renderStars(item.rating);
+            const isDynamic = item._dynamic;
+            const badgeLabel = isDynamic ? 'NEW' : '3D';
+            const badgeColor = isDynamic ? 'rgba(46,204,113,0.9)' : 'rgba(212,168,71,0.85)';
+
+            // Show product thumbnail if available, else emoji icon
+            const previewContent = item.image
+                ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                   <span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;filter:drop-shadow(0 0 6px ${item.color}99)">${getCategoryIcon(item.type)}</span>`
+                : `<span style="filter:drop-shadow(0 0 6px ${item.color}99);font-size:28px">${getCategoryIcon(item.type)}</span>`;
+
+            // Format file size
+            const sizeLabel = isDynamic && item._sizeBytes
+                ? `<span style="font-size:9px;color:var(--text-muted);margin-top:2px">${(item._sizeBytes / (1024 * 1024)).toFixed(1)} MB</span>`
+                : '';
+
+            card.innerHTML = `
+        <div class="card-preview" style="background:${previewBg};overflow:hidden;position:relative;">
+          ${previewContent}
+          <div style="position:absolute;top:4px;right:4px;background:${badgeColor};color:#000;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:0.05em;">${badgeLabel}</div>
+        </div>
+        <div class="card-info">
+          <div class="card-name">${item.name}</div>
+          <div class="card-material">${item.material}</div>
+          ${item.rating > 0 ? `<div class="card-stars">${stars}</div>` : sizeLabel}
+        </div>
+        ${item.price !== '—' ? `<div class="card-price">${formatINR(item.price)}</div>` : '<div class="card-price" style="color:var(--text-muted);font-size:11px">3D Model</div>'}
+      `;
+
+            card.addEventListener('click', () => selectItem(item));
+            jewelryList.appendChild(card);
+        });
+
+        // Auto-select first item if nothing selected yet
+        if (!currentItem && allItems.length > 0) {
+            selectItem(allItems[0]);
+        }
     }
 
     // ── Particles ─────────────────────────────────────────────
@@ -103,8 +248,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return '₹' + inr.toLocaleString('en-IN');
     }
 
+    let currentGoldRate24K = 15200;
+
+    function getItemPriceINR(item) {
+        if (item.weight && item.touch) {
+            return item.weight * (item.touch / 100) * currentGoldRate24K * 1.15;
+        }
+        const pStr = String(item.price || '0');
+        if (pStr.includes('Rs') || pStr.includes('₹')) {
+            return parseFloat(pStr.replace(/[^0-9.]/g, '')) || 0;
+        }
+        return (parseFloat(pStr.replace(/[^0-9.]/g, '')) || 0) * usdToInr;
+    }
+
+    function formatINRDirect(inrVal) {
+        return '₹' + Math.round(inrVal).toLocaleString('en-IN');
+    }
+
     async function initGoldRate() {
-        const CACHE_KEY = 'goldRate_v2';
+        const CACHE_KEY = 'goldRate_v3';
         const todayKey = new Date().toISOString().slice(0, 10);
         const valEl = document.getElementById('gold-rate-values');
 
@@ -131,8 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Gold rate fetch failed. Is Render sleeping?', err);
             // Fallback so the user isn't stuck waiting forever
             const staticData = {
-                rate_22k_per_gram: 6800,
-                rate_24k_per_gram: 7400,
+                rate_22k_per_gram: 14000,
+                rate_24k_per_gram: 15200,
                 usd_to_inr: 83.5,
                 date: new Date().toISOString().slice(0, 10)
             };
@@ -145,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyGoldRate(data) {
         usdToInr = data.usd_to_inr || 83.5;
+        currentGoldRate24K = data.rate_24k_per_gram || 15200;
         renderGoldWidget(data);
         renderCatalog(activeCategory);
         render2DCatalog();
@@ -186,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeCategory = 'earrings';
     renderCatalog(activeCategory);
     render2DCatalog();
+    renderTryonCatalog();
 
     // Select first item by default
     if (typeof JEWELRY_CATALOG !== 'undefined' && JEWELRY_CATALOG.length > 0) {
@@ -200,13 +364,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (categoryFilter) {
         categoryFilter.addEventListener('change', (e) => {
             activeCategory = e.target.value;
-            renderCatalog(activeCategory);
+
+            // If we're in explore mode, use the dynamic model renderer
+            if (currentMode === 'explore') {
+                renderExplore3DModels(activeCategory);
+            } else {
+                renderCatalog(activeCategory);
+            }
             
             if (activeCategory === 'all') {
                 if (JEWELRY_CATALOG.length > 0) selectItem(JEWELRY_CATALOG[0]);
             } else {
                 const first = JEWELRY_CATALOG.find(j => j.category === activeCategory);
                 if (first) selectItem(first);
+            }
+        });
+    }
+
+    // ── Try-On Filters change ────────────────────────────────────
+    function handleTryonFilters() {
+        renderTryonCatalog();
+    }
+    if (tryonSearch) tryonSearch.addEventListener('input', handleTryonFilters);
+    if (tryonCatFilter) tryonCatFilter.addEventListener('change', handleTryonFilters);
+    if (tryonPriceFilter) tryonPriceFilter.addEventListener('change', handleTryonFilters);
+
+    // ── Try-On Camera Expand ─────────────────────────────────────
+    const btnExpandCamera = document.getElementById('btn-expand-camera');
+    if (btnExpandCamera) {
+        btnExpandCamera.addEventListener('click', () => {
+            const mainView = document.querySelector('.tryon-main-view');
+            if (mainView) {
+                mainView.classList.toggle('expanded');
+                const isExpanded = mainView.classList.contains('expanded');
+                btnExpandCamera.innerHTML = isExpanded ? '🗗' : '⛶'; // Toggle icon
+                btnExpandCamera.title = isExpanded ? 'Collapse Camera View' : 'Expand Camera View';
             }
         });
     }
@@ -253,6 +445,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!viewerInitialized) {
                 setTimeout(() => {
                     initViewer();
+                    // Render dynamic 3D models in sidebar after viewer init
+                    renderExplore3DModels(activeCategory);
                 }, 50);
             } else if (viewer) {
                 // Force resize so canvas fills the visible panel
@@ -260,6 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reload current item so it renders
                 if (currentItem) viewer.loadJewelry(currentItem);
             }
+            // Always refresh the sidebar with dynamic models when entering explore
+            renderExplore3DModels(activeCategory);
         }
     }
 
@@ -330,10 +526,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeof JEWELRY_CATALOG === 'undefined') return;
 
-        let itemsToRender = JEWELRY_CATALOG;
+        // ONLY 2D Viewer items (Catalog pictures)
+        let itemsToRender = JEWELRY_CATALOG.filter(j => j.image && j.image.includes('/catalog/'));
+        
         // The global variable currentCatalogFilter is set by the filter click listener. Default is 'all'.
         if (typeof currentCatalogFilter !== 'undefined' && currentCatalogFilter !== 'all') {
-            itemsToRender = JEWELRY_CATALOG.filter(j => j.category === currentCatalogFilter);
+            itemsToRender = itemsToRender.filter(j => j.category === currentCatalogFilter);
         }
 
         itemsToRender.forEach(item => {
@@ -341,7 +539,8 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'product-card';
 
             const discount = item.discount || (Math.floor(Math.random() * 20) + 10);
-            const oldPrice = parseFloat(item.price.replace(/[^0-9.]/g, '')) * (1 + discount / 100);
+            const priceInr = getItemPriceINR(item);
+            const oldPriceInr = priceInr * (1 + discount / 100);
 
             card.innerHTML = `
                 <div class="product-card-badge">Premium</div>
@@ -352,8 +551,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="product-card-info">
                     <div class="product-card-name">${item.name}</div>
                     <div class="product-card-price-row">
-                        <span class="product-card-price">${formatINR(item.price)}</span>
-                        <span class="product-card-discount">${formatINR(oldPrice)}</span>
+                        <span class="product-card-price">${formatINRDirect(priceInr)}</span>
+                        <span class="product-card-discount">${formatINRDirect(oldPriceInr)}</span>
                     </div>
                     <div class="product-card-actions" style="margin-bottom: 8px;">
                         <button class="btn-card-action primary" onclick="addToCart('${item.id}')" style="background:var(--gold);color:#000;">Add to Cart</button>
@@ -378,17 +577,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // ── Sidebar Catalog rendering (Left Panel) ────────────────
+    // ── Sidebar Catalog rendering (Left Panel — 3D Viewer) ────────────────
     function renderCatalog(cat) {
         if (!jewelryList) return;
         jewelryList.innerHTML = '';
         if (typeof JEWELRY_CATALOG === 'undefined') return;
 
-        const items = cat === 'all' 
-            ? JEWELRY_CATALOG 
-            : JEWELRY_CATALOG.filter(j => j.category === cat);
-            
+        // Show ALL items that have a GLB file — these are 3D Viewer designs
+        const glbItems = JEWELRY_CATALOG.filter(j => j.glbFile && j.glbFile.trim() !== '');
+
+        const items = cat === 'all'
+            ? glbItems
+            : glbItems.filter(j => j.category === cat);
+
         items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'jewelry-card' + (currentItem?.id === item.id ? ' active' : '');
+            card.dataset.id = item.id;
+
+            const previewBg = item.gemColor
+                ? `linear-gradient(135deg, ${item.color}55 0%, ${item.gemColor}44 100%)`
+                : `linear-gradient(135deg, ${item.color}44 0%, ${item.color}22 100%)`;
+
+            const stars = renderStars(item.rating);
+
+            // Show product image thumbnail if available, else fallback to emoji icon
+            const previewContent = item.image
+                ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                   <span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;filter:drop-shadow(0 0 6px ${item.color}99)">${getCategoryIcon(item.type)}</span>`
+                : `<span style="filter:drop-shadow(0 0 6px ${item.color}99)">${getCategoryIcon(item.type)}</span>`;
+
+            card.innerHTML = `
+        <div class="card-preview" style="background:${previewBg};overflow:hidden;position:relative;">
+          ${previewContent}
+          <div style="position:absolute;top:4px;right:4px;background:rgba(212,168,71,0.85);color:#000;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:0.05em;">3D</div>
+        </div>
+        <div class="card-info">
+          <div class="card-name">${item.name}</div>
+          <div class="card-material">${item.material}</div>
+          <div class="card-stars">${stars}</div>
+        </div>
+        <div class="card-price">${formatINRDirect(getItemPriceINR(item))}</div>
+      `;
+
+            card.addEventListener('click', () => selectItem(item));
+            jewelryList.appendChild(card);
+        });
+    }
+
+    // ── Try-On Sidebar Catalog rendering ──────────────────────────
+    function renderTryonCatalog() {
+        if (!tryonCollectionList) return;
+        tryonCollectionList.innerHTML = '';
+        if (typeof JEWELRY_CATALOG === 'undefined') return;
+
+        const searchTerm = tryonSearch ? tryonSearch.value.toLowerCase() : '';
+        const catFilter = tryonCatFilter ? tryonCatFilter.value : 'all';
+        const priceFilter = tryonPriceFilter ? tryonPriceFilter.value : 'all';
+
+        // ONLY Try-On items (necklace, earring, etc, NO CATALOG PICTURES)
+        const tryonItems = JEWELRY_CATALOG.filter(j => j.image && !j.image.includes('/catalog/'));
+
+        const filtered = tryonItems.filter(item => {
+            // Search
+            if (searchTerm && !item.name.toLowerCase().includes(searchTerm)) return false;
+            // Category
+            if (catFilter !== 'all' && item.category !== catFilter) return false;
+            // Price
+            if (priceFilter !== 'all') {
+                const inrPrice = getItemPriceINR(item);
+                if (priceFilter === 'under100k' && inrPrice >= 100000) return false;
+                if (priceFilter === '100k-200k' && (inrPrice < 100000 || inrPrice > 200000)) return false;
+                if (priceFilter === 'over200k' && inrPrice <= 200000) return false;
+            }
+            return true;
+        });
+
+        filtered.forEach(item => {
             const card = document.createElement('div');
             card.className = 'jewelry-card' + (currentItem?.id === item.id ? ' active' : '');
             card.dataset.id = item.id;
@@ -408,11 +673,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="card-material">${item.material}</div>
           <div class="card-stars">${stars}</div>
         </div>
-        <div class="card-price">${formatINR(item.price)}</div>
+        <div class="card-price">${formatINRDirect(getItemPriceINR(item))}</div>
       `;
 
             card.addEventListener('click', () => selectItem(item));
-            jewelryList.appendChild(card);
+            tryonCollectionList.appendChild(card);
         });
     }
 
@@ -438,6 +703,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update category button states
         updateCategoryButtons();
+
+        // Update Try-On Right Panel Preview
+        const tryPreviewImg = document.getElementById('tryon-preview-img');
+        if (tryPreviewImg) {
+            tryPreviewImg.src = item.image || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+            document.getElementById('tryon-preview-name').textContent = item.name;
+            const formattedPrice = formatINRDirect(getItemPriceINR(item));
+            document.getElementById('tryon-preview-price').textContent = formattedPrice;
+            document.getElementById('tryon-preview-material').textContent = item.material;
+            const rt = document.getElementById('tryon-preview-rating');
+            if (rt) {
+                rt.innerHTML = `${renderStars(item.rating)} <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">${item.rating} (${item.ratingCount})</span>`;
+            }
+            document.getElementById('tryon-preview-desc').innerHTML = `
+              <strong>Category:</strong> ${capitalize(item.category)}<br>
+              <strong>Description:</strong> ${item.description}<br>
+              <em>High-precision AI Try-On Enabled</em>
+            `;
+        }
     }
 
     function updateProductSidebar(item) {
@@ -450,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
         productBadge.innerHTML = `${getMaterialIcon(item.material)} ${item.material}`;
 
         productName.textContent = item.name;
-        if (productPrice) productPrice.textContent = formatINR(item.price);
+        if (productPrice) productPrice.textContent = formatINRDirect(getItemPriceINR(item));
         if (productRating) productRating.textContent = item.rating.toFixed(1);
         if (productRatCt) productRatCt.textContent = `(${item.ratingCount} reviews)`;
         if (productRatStars) productRatStars.innerHTML = renderStars(item.rating);
@@ -458,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (specMaterial) specMaterial.textContent = item.material;
         if (specCategory) specCategory.textContent = capitalize(item.category);
-        if (specPrice) specPrice.textContent = formatINR(item.price);
+        if (specPrice) specPrice.textContent = formatINRDirect(getItemPriceINR(item));
         if (specId) specId.textContent = item.id.toUpperCase();
 
         // Color dots
@@ -509,6 +793,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tryonEngine.setItem(currentItem);
             if (btnCapture) btnCapture.disabled = false;
+            if (btnRetake) btnRetake.disabled = false;
+
+            // Wire keyboard selection callback
+            window._tryonSelectCallback = (item) => selectItem(item);
 
             setupTryOnControls();
 
@@ -524,13 +812,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const toggleEarrings = document.getElementById('toggle-earrings');
         const toggleNecklace = document.getElementById('toggle-necklace');
         const toggleNosepin = document.getElementById('toggle-nosepin');
+        
+        const camToggleEarrings = document.getElementById('cam-toggle-earrings');
+        const camToggleNecklace = document.getElementById('cam-toggle-necklace');
+        const camToggleNosepin = document.getElementById('cam-toggle-nosepin');
 
-        function onToggleChange() {
+        function onToggleChange(e) {
+            // Sync toggles if they exist
+            if (e && e.target) {
+                const id = e.target.id;
+                const isChecked = e.target.checked;
+                if (id.includes('earrings')) {
+                    if (toggleEarrings) toggleEarrings.checked = isChecked;
+                    if (camToggleEarrings) camToggleEarrings.checked = isChecked;
+                } else if (id.includes('necklace')) {
+                    if (toggleNecklace) toggleNecklace.checked = isChecked;
+                    if (camToggleNecklace) camToggleNecklace.checked = isChecked;
+                } else if (id.includes('nosepin')) {
+                    if (toggleNosepin) toggleNosepin.checked = isChecked;
+                    if (camToggleNosepin) camToggleNosepin.checked = isChecked;
+                }
+            }
+
+            // Always read state from the main sidebar toggles (which are now synced)
+            const eChecked = toggleEarrings ? toggleEarrings.checked : true;
+            const nChecked = toggleNecklace ? toggleNecklace.checked : true;
+            const npChecked = toggleNosepin ? toggleNosepin.checked : true;
+
             if (tryonEngine) {
                 tryonEngine.setEnabledTypes({
-                    earrings: toggleEarrings ? toggleEarrings.checked : true,
-                    necklace: toggleNecklace ? toggleNecklace.checked : true,
-                    nosepin: toggleNosepin ? toggleNosepin.checked : true
+                    earrings: eChecked,
+                    necklace: nChecked,
+                    nosepin: npChecked
                 });
             }
             updateTryOnGallery();
@@ -539,6 +852,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (toggleEarrings) toggleEarrings.addEventListener('change', onToggleChange);
         if (toggleNecklace) toggleNecklace.addEventListener('change', onToggleChange);
         if (toggleNosepin) toggleNosepin.addEventListener('change', onToggleChange);
+
+        if (camToggleEarrings) camToggleEarrings.addEventListener('change', onToggleChange);
+        if (camToggleNecklace) camToggleNecklace.addEventListener('change', onToggleChange);
+        if (camToggleNosepin) camToggleNosepin.addEventListener('change', onToggleChange);
 
         updateTryOnGallery();
     }
@@ -555,7 +872,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (toggleNecklace && toggleNecklace.checked) enabledCategories.push('necklace');
         if (toggleNosepin && toggleNosepin.checked) enabledCategories.push('nosepin');
 
-        const items = JEWELRY_CATALOG.filter(j => enabledCategories.includes(j.category));
+        // ONLY Try-On items (necklace, earring, etc, NO CATALOG PICTURES)
+        const tryonItems = JEWELRY_CATALOG.filter(j => j.image && !j.image.includes('/catalog/'));
+        const items = tryonItems.filter(j => enabledCategories.includes(j.category));
+
         if (tryonEngine.setGalleryItems) {
             tryonEngine.setGalleryItems(items, enabledCategories.join('+'));
         }
@@ -587,7 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
             overlay.innerHTML = `
               <div class="tryon-analyzing-spinner"></div>
               <div class="tryon-analyzing-text">✦ AI Analyzing 468 facial landmarks…</div>
-              <div class="tryon-analyzing-sub">Positioning 3D jewelry & applying studio finish</div>
+              <div class="tryon-analyzing-sub">Positioning jewelry & applying studio finish</div>
             `;
             tryonWrapper.appendChild(overlay);
 
@@ -620,6 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function doRetake() {
         if (tryonEngine) tryonEngine.retake();
         if (modalOverlay) modalOverlay.classList.remove('open');
+        if (btnCapture) btnCapture.disabled = false;
     }
 
     if (btnRetake) btnRetake.addEventListener('click', doRetake);
@@ -732,14 +1053,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── Anti-Gravity Toggle ───────────────────────────────────
-    const btnAntiGravity = document.getElementById('btn-antigravity');
-    let antiGravityOn = true;
-    if (btnAntiGravity) {
-        btnAntiGravity.addEventListener('click', () => {
-            antiGravityOn = !antiGravityOn;
-            btnAntiGravity.classList.toggle('active', antiGravityOn);
-            if (tryonEngine) tryonEngine.setAntiGravity(antiGravityOn);
+    // ── Upload Button ────────────────────────────────────────
+    if (btnUpload && uploadInput) {
+        btnUpload.addEventListener('click', () => {
+            uploadInput.click();
+        });
+        uploadInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !tryonEngine) return;
+            await tryonEngine.uploadPhoto(file);
+            if (btnCapture) btnCapture.disabled = false;
+            // Reset input so same file can be selected again
+            uploadInput.value = '';
         });
     }
 

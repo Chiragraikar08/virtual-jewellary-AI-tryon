@@ -825,7 +825,14 @@ body {
   background: rgba(0, 0, 0, 0.4);
 }
 
-/* ── Try-On Viewer ─────────────────────────────────────────── */
+.tryon-collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
 .tryon-wrapper {
   position: relative;
   flex: 1;
@@ -836,25 +843,65 @@ body {
   background: #020308;
 }
 
-#webcam-video {
-  position: absolute;
+.tryon-main-view {
+  display: flex;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  transform: scaleX(-1);
-  opacity: 1;
+  padding: 15px;
+  gap: 15px;
+  transition: all 0.3s ease;
+}
+
+.tryon-main-view.expanded .tryon-side-panel {
+  display: none !important;
+}
+
+.btn-expand-camera {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s;
+}
+
+.btn-expand-camera:hover {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+#webcam-video {
+  /* Video is hidden — the 2D canvas draws the mirrored frame + jewelry */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 #tryon-canvas {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain; /* or cover depending on preference, user said cover or contain, but contain ensures no cropping of the face */
+  display: block;
   position: absolute;
   inset: 0;
   z-index: 2;
-  /* Opacity is controlled by JS: 0 during live view, auto during capture */
-  transition: opacity 0.25s ease;
-  pointer-events: none;
+  opacity: 1;
+  /* Slight brightness/contrast boost for premium feel (port of Python adjust_vis) */
+  filter: brightness(1.05) contrast(1.08);
 }
 
 /* Analyzing-state overlay — shown while capture/detection is running */
@@ -960,11 +1007,13 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 8px 20px;
   border-radius: 30px;
   font-size: 13px;
   font-weight: 500;
   backdrop-filter: blur(10px);
+  background: rgba(6, 8, 16, 0.7);
+  border: 1px solid var(--border-dim);
   transition: var(--transition);
   pointer-events: none;
   white-space: nowrap;
@@ -1475,7 +1524,39 @@ body {
 
 .rating-ct {
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--gold);
+}
+
+.tryon-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 1em;
+}
+
+.tryon-search-input,
+.tryon-select {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius-sm);
+  color: var(--text-light);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.tryon-search-input:focus,
+.tryon-select:focus {
+  outline: none;
+  border-color: var(--gold);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.tryon-select option {
+  background: var(--bg-card);
+  color: var(--text-light);
 }
 
 .product-price-row {
