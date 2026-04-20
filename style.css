@@ -3492,4 +3492,120 @@ body {
     display: none !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE & ANDROID RESPONSIVENESS
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 860px) {
+  /* Allow natural scrolling instead of hidden */
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Compress the header items */
+  .header {
+    height: auto;
+    min-height: 64px;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .logo-text {
+    font-size: 16px;
+  }
+
+  .header-actions {
+    justify-content: flex-end;
+  }
+
+  .gold-rate-meta {
+    display: none; /* Hide date on small screens */
+  }
+
+  /* Stack the main application layout */
+  .app-layout {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding-top: 100px; /* Offset for wrapped header */
+    padding-bottom: 80px;
+  }
+
+  /* Center Viewer takes precedence natively */
+  .viewer-area {
+    min-height: 60vh;
+    order: 1; /* Keep it below header/tabs if needed, or re-order if desired */
+  }
+
+  #canvas-3d, .tryon-main-view {
+    height: 60vh !important;
+    min-height: 400px;
+  }
+
+  /* Sidebars flow below the main content */
+  .sidebar-left {
+    order: 2;
+    border-right: none;
+    border-top: 1px solid var(--border-dim);
+  }
+
+  .sidebar-right {
+    order: 3;
+    border-left: none;
+    border-top: 1px solid var(--border-dim);
+    width: 100%;
+  }
+
+  .jewelry-list {
+    max-height: 300px; /* Instead of full flex, give it a scrolling max height */
+    overflow-y: auto;
+  }
+
+  /* Shrink Catalog elements */
+  .catalog-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .product-card-info {
+    padding: 10px;
+  }
+
+  .product-card-actions {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  /* Adapting Modals and Cart */
+  .cart-panel {
+    width: 100% !important;
+    right: -100%;
+  }
+  
+  .invoice-box, .modal-box {
+    width: 95% !important;
+    max-width: 100% !important;
+    padding: 20px !important;
+  }
+
+  .mode-switcher {
+    width: 100%;
+    justify-content: space-evenly;
+    order: 3; /* Move to bottom of header */
+    margin-top: 5px;
+  }
+  
+  .mode-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .tryon-gallery-container {
+      width: 100%;
+  }
+}
+
 

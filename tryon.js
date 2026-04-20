@@ -309,6 +309,11 @@ class TryOnEngine {
             return true;
         } catch (e) {
             console.error('Camera error:', e);
+            if(window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                alert("Camera Access Blocked 📷\n\nAndroid/iOS requires an HTTPS connection for camera access. Please open your live Vercel URL (.vercel.app) to use the AI Try-On on your mobile device!");
+            } else {
+                alert("Camera Error: Please grant camera permissions in your browser settings to use the Try-On feature.");
+            }
             return false;
         }
     }
