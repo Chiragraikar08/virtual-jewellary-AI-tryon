@@ -731,7 +731,7 @@ class TryOnEngine {
             // Strict Final Correct Positioning - MIRROR CALIBRATED (Perfect Attachment V5)
             const ew = Math.round(fw * 0.095);     // slightly smaller designs
             const earOffsetX = Math.round(fw * 0.05);
-            const earOffsetY = Math.round(fw * 0.08); // Adjusted upwards (was 0.14)
+            const earOffsetY = Math.round(fw * 0.16); // Adjusted downwards
 
             // ── Left Earring (idx 234) ──
             // Mirror: Real Left is on Screen-Right. To move OUTWARD, we ADD (+)
