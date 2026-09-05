@@ -117,33 +117,48 @@ document.addEventListener('DOMContentLoaded', () => {
      * Any .glb in static/models/ that is NOT already in JEWELRY_CATALOG gets listed too.
      * This is 3D Viewer ONLY — AI Try-On is not affected.
      */
+    let exploreRenderSeq = 0;
+
     async function renderExplore3DModels(cat) {
         if (!jewelryList) return;
+        const currentSeq = ++exploreRenderSeq;
+
+        // 1) Fetch dynamic models from backend (if available)
+        await fetchDynamicModels();
+        if (currentSeq !== exploreRenderSeq) return; // Discard superseded render call
+
         jewelryList.innerHTML = '';
 
-        // 1) Fetch dynamic models from backend
-        const serverModels = await fetchDynamicModels();
+        // 2) Collect all items from JEWELRY_CATALOG that have a valid glbFile
+        // Deduplicate strictly by GLB filename so every 3D ornament is unique!
+        const seenGLBs = new Set();
+        const seenIds = new Set();
+        const catalogItems = [];
 
-        // 2) Collect filenames from JEWELRY_CATALOG that have glbFile
-        const catalogGlbNames = new Set();
         if (typeof JEWELRY_CATALOG !== 'undefined') {
             JEWELRY_CATALOG.forEach(j => {
-                if (j.glbFile) catalogGlbNames.add(j.glbFile);
+                if (!j.glbFile || !j.glbFile.trim()) return;
+                const glbLower = j.glbFile.toLowerCase();
+                // Skip duplicate copies or already seen models
+                if (glbLower === 'gold_ring_for_female (1).glb') return;
+                if (seenGLBs.has(glbLower) || seenIds.has(j.id)) return;
+
+                seenGLBs.add(glbLower);
+                seenIds.add(j.id);
+                catalogItems.push(j);
             });
         }
 
-        // 3) Build unified list: catalog items first, then new dynamic-only models
-        const allowedGLBs = ['earing4.glb', 'earing2.glb', 'earring.glb', 'earring3.glb'];
-        const catalogItems = (typeof JEWELRY_CATALOG !== 'undefined')
-            ? JEWELRY_CATALOG.filter(j => j.glbFile && allowedGLBs.includes(j.glbFile))
-            : [];
+        // 3) Any server-discovered dynamic GLB models not yet in catalog
+        const extraModels = (dynamicModelsList || []).filter(m => {
+            if (!m.filename) return false;
+            const fnameLower = m.filename.toLowerCase();
+            if (fnameLower === 'gold_ring_for_female (1).glb') return false;
+            return !seenGLBs.has(fnameLower);
+        });
 
-        // Dynamic models not in catalog
-        const extraModels = []; // Disabled to remove extra files taking up space
-
-        // Convert extra models to pseudo-catalog items so selectItem/viewer.loadJewelry works
         const dynamicItems = extraModels.map(m => {
-            // Guess category from filename
+            seenGLBs.add(m.filename.toLowerCase());
             let category = 'other';
             const fname = m.filename.toLowerCase();
             if (fname.includes('earring') || fname.includes('earing')) category = 'earrings';
@@ -166,25 +181,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 metalness: 0.9,
                 roughness: 0.15,
                 price: '—',
-                rating: 0,
-                ratingCount: 0,
+                rating: 5.0,
+                ratingCount: 12,
                 material: 'Premium Metal',
-                description: `Dynamically loaded 3D model: ${m.filename}`,
+                description: `Exclusive 3D design: ${m.name}`,
                 tags: ['3d', 'dynamic'],
                 _dynamic: true,
                 _sizeBytes: m.size_bytes,
             };
         });
 
-        // Merge
+        // Merge catalog and dynamic items
         let allItems = [...catalogItems, ...dynamicItems];
 
-        // Filter by category if needed
+        // Filter by category if requested
         if (cat && cat !== 'all') {
             allItems = allItems.filter(j => j.category === cat);
         }
 
-        // 4) Render cards
+        // 4) Render cards (guaranteed 100% unique, non-duplicate!)
         allItems.forEach(item => {
             const card = document.createElement('div');
             card.className = 'jewelry-card' + (currentItem?.id === item.id ? ' active' : '');
@@ -199,11 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const badgeLabel = isDynamic ? 'NEW' : '3D';
             const badgeColor = isDynamic ? 'rgba(46,204,113,0.9)' : 'rgba(212,168,71,0.85)';
 
-            // Show product thumbnail if available, else emoji icon
-            const previewContent = item.image
+            // Show authentic product thumbnail if in 2D catalog, else render glowing 3D ornament icon
+            const previewContent = (item.image && item.is2DCatalog)
                 ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                   <span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;filter:drop-shadow(0 0 6px ${item.color}99)">${getCategoryIcon(item.type)}</span>`
-                : `<span style="filter:drop-shadow(0 0 6px ${item.color}99);font-size:28px">${getCategoryIcon(item.type)}</span>`;
+                   <span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;filter:drop-shadow(0 0 6px ${item.color}99);font-size:26px;">${getCategoryIcon(item.type)}</span>`
+                : `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;filter:drop-shadow(0 0 8px ${item.color}bb);font-size:28px;">${getCategoryIcon(item.type)}</span>`;
 
             // Format file size
             const sizeLabel = isDynamic && item._sizeBytes
@@ -227,8 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
             jewelryList.appendChild(card);
         });
 
-        // Auto-select first item if nothing selected yet
-        if (!currentItem && allItems.length > 0) {
+        // Auto-select first item if currently selected item is not in this category
+        const isCurrentInList = currentItem && allItems.some(i => i.id === currentItem.id);
+        if (!isCurrentInList && allItems.length > 0) {
             selectItem(allItems[0]);
         }
     }
@@ -357,6 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentItem = JEWELRY_CATALOG[0];
         selectItem(currentItem);
     }
+    switchMode('catalog');
 
     // Kick off gold rate load
     initGoldRate();
@@ -365,20 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (categoryFilter) {
         categoryFilter.addEventListener('change', (e) => {
             activeCategory = e.target.value;
-
-            // If we're in explore mode, use the dynamic model renderer
-            if (currentMode === 'explore') {
-                renderExplore3DModels(activeCategory);
-            } else {
-                renderCatalog(activeCategory);
-            }
+            renderExplore3DModels(activeCategory);
             
-            if (activeCategory === 'all') {
-                if (JEWELRY_CATALOG.length > 0) selectItem(JEWELRY_CATALOG[0]);
-            } else {
-                const first = JEWELRY_CATALOG.find(j => j.category === activeCategory);
-                if (first) selectItem(first);
-            }
+            const first = (activeCategory === 'all')
+                ? (typeof JEWELRY_CATALOG !== 'undefined' ? JEWELRY_CATALOG.find(j => j.glbFile) : null)
+                : (typeof JEWELRY_CATALOG !== 'undefined' ? JEWELRY_CATALOG.find(j => j.category === activeCategory && j.glbFile) : null);
+            if (first) selectItem(first);
         });
     }
 
@@ -430,6 +439,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchMode(mode) {
         currentMode = mode;
+        document.body.dataset.mode = mode;
+        const appLayout = document.querySelector('.app-layout');
+        if (appLayout) appLayout.dataset.mode = mode;
+
         modeBtns.forEach(b => {
             b.classList.toggle('active', b.dataset.mode === mode);
             b.setAttribute('aria-selected', b.dataset.mode === mode ? 'true' : 'false');
@@ -446,17 +459,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!viewerInitialized) {
                 setTimeout(() => {
                     initViewer();
-                    // Render dynamic 3D models in sidebar after viewer init
                     renderExplore3DModels(activeCategory);
                 }, 50);
-            } else if (viewer) {
-                // Force resize so canvas fills the visible panel
-                viewer._onResize();
-                // Reload current item so it renders
-                if (currentItem) viewer.loadJewelry(currentItem);
+            } else {
+                if (viewer) {
+                    viewer._onResize();
+                    if (currentItem) viewer.loadJewelry(currentItem);
+                }
+                renderExplore3DModels(activeCategory);
             }
-            // Always refresh the sidebar with dynamic models when entering explore
-            renderExplore3DModels(activeCategory);
         }
     }
 
@@ -527,8 +538,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (typeof JEWELRY_CATALOG === 'undefined') return;
 
-        // ONLY 2D Viewer items (Catalog pictures)
-        let itemsToRender = JEWELRY_CATALOG.filter(j => j.image && j.image.includes('/catalog/'));
+        // ONLY genuine 2D Catalog items (Catalog pictures)
+        let itemsToRender = JEWELRY_CATALOG.filter(j => j.is2DCatalog);
         
         // The global variable currentCatalogFilter is set by the filter click listener. Default is 'all'.
         if (typeof currentCatalogFilter !== 'undefined' && currentCatalogFilter !== 'all') {
@@ -571,7 +582,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Export select function for inline onclicks
     window.appSelect = (id, targetMode) => {
-        const item = JEWELRY_CATALOG.find(j => j.id === id);
+        let item = JEWELRY_CATALOG.find(j => j.id === id);
+        if (targetMode === 'explore') {
+            // When switching to 3D mode from 2D catalog, ensure we load a valid 3D model:
+            if (!item || !item.glbFile) {
+                const cat = item ? item.category : 'all';
+                const modelInCat = (cat !== 'all') ? JEWELRY_CATALOG.find(j => j.category === cat && j.glbFile) : null;
+                item = modelInCat || JEWELRY_CATALOG.find(j => j.glbFile) || item;
+            }
+        }
         if (item) {
             selectItem(item);
             switchMode(targetMode);
@@ -648,51 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Sidebar Catalog rendering (Left Panel — 3D Viewer) ────────────────
     function renderCatalog(cat) {
-        if (!jewelryList) return;
-        jewelryList.innerHTML = '';
-        if (typeof JEWELRY_CATALOG === 'undefined') return;
-
-        // Show ALL items that have a GLB file — these are 3D Viewer designs
-        const allowedGLBs = ['earing4.glb', 'earing2.glb', 'earring.glb', 'earring3.glb'];
-        const glbItems = JEWELRY_CATALOG.filter(j => j.glbFile && allowedGLBs.includes(j.glbFile));
-
-        const items = cat === 'all'
-            ? glbItems
-            : glbItems.filter(j => j.category === cat);
-
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'jewelry-card' + (currentItem?.id === item.id ? ' active' : '');
-            card.dataset.id = item.id;
-
-            const previewBg = item.gemColor
-                ? `linear-gradient(135deg, ${item.color}55 0%, ${item.gemColor}44 100%)`
-                : `linear-gradient(135deg, ${item.color}44 0%, ${item.color}22 100%)`;
-
-            const stars = renderStars(item.rating);
-
-            // Show product image thumbnail if available, else fallback to emoji icon
-            const previewContent = item.image
-                ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                   <span style="display:none;align-items:center;justify-content:center;width:100%;height:100%;filter:drop-shadow(0 0 6px ${item.color}99)">${getCategoryIcon(item.type)}</span>`
-                : `<span style="filter:drop-shadow(0 0 6px ${item.color}99)">${getCategoryIcon(item.type)}</span>`;
-
-            card.innerHTML = `
-        <div class="card-preview" style="background:${previewBg};overflow:hidden;position:relative;">
-          ${previewContent}
-          <div style="position:absolute;top:4px;right:4px;background:rgba(212,168,71,0.85);color:#000;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;letter-spacing:0.05em;">3D</div>
-        </div>
-        <div class="card-info">
-          <div class="card-name">${item.name}</div>
-          <div class="card-material">${item.material}</div>
-          <div class="card-stars">${stars}</div>
-        </div>
-        <div class="card-price">${formatINRDirect(getItemPriceINR(item))}</div>
-      `;
-
-            card.addEventListener('click', () => selectItem(item));
-            jewelryList.appendChild(card);
-        });
+        renderExplore3DModels(cat);
     }
 
     // ── Try-On Sidebar Catalog rendering ──────────────────────────

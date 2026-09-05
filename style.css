@@ -3608,4 +3608,53 @@ body {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   MODE SEPARATION: 2D CATALOG vs 3D VIEWER vs AI TRY-ON
+   ══════════════════════════════════════════════════════════════ */
+
+/* In 2D Catalog mode: Hide the 3D-specific sidebars so the catalog grid has full-width luxury display */
+body[data-mode="catalog"] .sidebar-left,
+body[data-mode="catalog"] .sidebar-right,
+.app-layout[data-mode="catalog"] .sidebar-left,
+.app-layout[data-mode="catalog"] .sidebar-right {
+  display: none !important;
+}
+
+body[data-mode="catalog"] .app-layout,
+.app-layout[data-mode="catalog"] {
+  grid-template-columns: 1fr !important;
+}
+
+body[data-mode="catalog"] #panel-catalog {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* In AI Try-On mode: Hide the 3D sidebars since Try-On has its own self-contained interface */
+body[data-mode="tryon"] .sidebar-left,
+body[data-mode="tryon"] .sidebar-right,
+.app-layout[data-mode="tryon"] .sidebar-left,
+.app-layout[data-mode="tryon"] .sidebar-right {
+  display: none !important;
+}
+
+body[data-mode="tryon"] .app-layout,
+.app-layout[data-mode="tryon"] {
+  grid-template-columns: 1fr !important;
+}
+
+/* In 3D Viewer mode: Show the 3-column layout with 3D model list and specifications */
+body[data-mode="explore"] .sidebar-left,
+body[data-mode="explore"] .sidebar-right,
+.app-layout[data-mode="explore"] .sidebar-left,
+.app-layout[data-mode="explore"] .sidebar-right {
+  display: flex !important;
+}
+
+body[data-mode="explore"] .app-layout,
+.app-layout[data-mode="explore"] {
+  grid-template-columns: 270px 1fr 300px !important;
+}
+
 

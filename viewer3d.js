@@ -276,6 +276,10 @@ class JewelryViewer {
             return;
         }
 
+        this._loadSeq = (this._loadSeq || 0) + 1;
+        const thisLoadId = this._loadSeq;
+        this._currentLoadId = thisLoadId;
+
         this._showLoading(true);
 
         // Immediately remove the previous model so it never overlaps
@@ -289,6 +293,10 @@ class JewelryViewer {
         this.loader.load(
             url,
             (gltf) => {
+                if (this._currentLoadId !== thisLoadId) {
+                    // A newer model load was started, ignore this one
+                    return;
+                }
                 const model = gltf.scene;
 
                 // 1. Auto-scale & center
@@ -314,6 +322,7 @@ class JewelryViewer {
             },
             undefined,
             (err) => {
+                if (this._currentLoadId !== thisLoadId) return;
                 console.error('GLB load error for', glbFile, err);
                 this._showLoading(false);
                 this._showFallback(item);
@@ -321,20 +330,23 @@ class JewelryViewer {
         );
     }
 
-    _showFallback(item) {
-        const geo = new THREE.TorusGeometry(0.8, 0.2, 32, 128);
-        const mat = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(item.color || 0xD4AF37),
-            metalness: 1.0,
-            roughness: 0.25,
-            envMapIntensity: 1.5,
-        });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.castShadow = true;
-        mesh.position.y = 0.3;
-        this.scene.add(mesh);
-        this.currentMesh = mesh;
-        this._fadeIn(mesh);
+    _showFallback(item, err) {
+        console.error('[3D Viewer] Error loading model for:', item.name, err);
+        const wrapper = this.canvas.parentElement;
+        if (!wrapper) return;
+        
+        let errToast = wrapper.querySelector('.viewer-error-toast');
+        if (!errToast) {
+            errToast = document.createElement('div');
+            errToast.className = 'viewer-error-toast';
+            errToast.style.cssText = 'position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(220,53,69,0.9);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:100;pointer-events:none;box-shadow:0 4px 15px rgba(0,0,0,0.5);display:none;';
+            wrapper.appendChild(errToast);
+        }
+        errToast.textContent = `⚠️ Could not load 3D model for "${item.name}". Please ensure server is running.`;
+        errToast.style.display = 'block';
+        setTimeout(() => {
+            if (errToast) errToast.style.display = 'none';
+        }, 5000);
     }
 
     _fadeIn(mesh, targetScale) {
