@@ -378,6 +378,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Kick off gold rate load
     initGoldRate();
 
+    // ── SQLite Database Sync ──────────────────────────────────
+    async function syncCatalogFromDatabase() {
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/catalog`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (data.status === 'success' && Array.isArray(data.items) && data.items.length > 0) {
+                console.log(`[Database] Linked SQLite DB with ${data.items.length} items.`);
+                if (typeof JEWELRY_CATALOG !== 'undefined') {
+                    JEWELRY_CATALOG.length = 0;
+                    data.items.forEach(item => JEWELRY_CATALOG.push(item));
+                }
+                renderCatalog(activeCategory);
+                render2DCatalog();
+                renderTryonCatalog();
+            }
+        } catch (err) {
+            console.log('[Database] Backend offline or sleeping; using local cached catalog fallback.', err.message);
+        }
+    }
+    syncCatalogFromDatabase();
+
     // ── Category filter change ───────────────────────────────────
     if (categoryFilter) {
         categoryFilter.addEventListener('change', (e) => {
@@ -1172,6 +1194,275 @@ document.addEventListener('DOMContentLoaded', () => {
     function capitalize(s) {
         return s.charAt(0).toUpperCase() + s.slice(1);
     }
+
+    // ══════════════════════════════════════════════════════════
+    // AUTHENTICATION: LOGIN, REGISTRATION, PROFILE & LOGOUT
+    // ══════════════════════════════════════════════════════════
+    function initAuth() {
+        const loginOverlay = document.getElementById('login-overlay');
+        const loginForm = document.getElementById('login-form');
+        const tabSignin = document.getElementById('tab-signin');
+        const tabSignup = document.getElementById('tab-signup');
+        const groupName = document.getElementById('group-name');
+        const loginName = document.getElementById('login-name');
+        const loginEmail = document.getElementById('login-email');
+        const loginPassword = document.getElementById('login-password');
+        const loginError = document.getElementById('login-error');
+        const loginSuccess = document.getElementById('login-success');
+        const btnSubmit = document.getElementById('btn-login-submit');
+        const btnGuest = document.getElementById('btn-guest-login');
+        const loginTitle = document.getElementById('login-title');
+        const loginSub = document.getElementById('login-sub');
+
+        // Header & Profile elements
+        const userHeaderChip = document.getElementById('user-header-chip');
+        const userChipName = document.getElementById('user-chip-name');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsMenu = document.getElementById('settings-menu');
+        const btnProfile = document.getElementById('btn-profile');
+        const btnLogout = document.getElementById('btn-logout');
+
+        // Profile Modal elements
+        const profileModalOverlay = document.getElementById('profile-modal-overlay');
+        const btnCloseProfile = document.getElementById('btn-close-profile');
+        const profileUserName = document.getElementById('profile-user-name');
+        const profileUserEmail = document.getElementById('profile-user-email');
+        const profileAvatarInitials = document.getElementById('profile-avatar-initials');
+        const profileMemberSince = document.getElementById('profile-member-since');
+        const btnProfileModalLogout = document.getElementById('btn-profile-modal-logout');
+
+        let authMode = 'signin'; // 'signin' | 'signup'
+
+        // Check active session
+        function checkSession() {
+            try {
+                const saved = localStorage.getItem('vinayaka_user');
+                if (saved) {
+                    const user = JSON.parse(saved);
+                    applyLoggedInUser(user);
+                    if (loginOverlay) loginOverlay.classList.add('hidden');
+                    return user;
+                }
+            } catch (e) { }
+            // If no user, show login overlay
+            if (loginOverlay) loginOverlay.classList.remove('hidden');
+            if (userChipName) userChipName.textContent = 'Sign In';
+            return null;
+        }
+
+        function applyLoggedInUser(user) {
+            if (userChipName) {
+                userChipName.textContent = user.name ? user.name.split(' ')[0] : 'Member';
+            }
+        }
+
+        // Mode Switching: Sign In vs Sign Up
+        function setAuthMode(mode) {
+            authMode = mode;
+            if (loginError) loginError.style.display = 'none';
+            if (loginSuccess) loginSuccess.style.display = 'none';
+
+            if (mode === 'signup') {
+                if (tabSignup) tabSignup.classList.add('active');
+                if (tabSignin) tabSignin.classList.remove('active');
+                if (groupName) groupName.style.display = 'block';
+                if (loginName) loginName.required = true;
+                if (btnSubmit) btnSubmit.textContent = 'Create Account';
+                if (loginTitle) loginTitle.textContent = 'Create an Account';
+                if (loginSub) loginSub.textContent = 'Register to unlock exclusive 3D try-on features & billing.';
+            } else {
+                if (tabSignin) tabSignin.classList.add('active');
+                if (tabSignup) tabSignup.classList.remove('active');
+                if (groupName) groupName.style.display = 'none';
+                if (loginName) loginName.required = false;
+                if (btnSubmit) btnSubmit.textContent = 'Sign In';
+                if (loginTitle) loginTitle.textContent = 'Welcome to VINAYAKA JEWELLARY';
+                if (loginSub) loginSub.textContent = 'Please sign in to explore our premium try-on experience.';
+            }
+        }
+
+        if (tabSignin) tabSignin.addEventListener('click', () => setAuthMode('signin'));
+        if (tabSignup) tabSignup.addEventListener('click', () => setAuthMode('signup'));
+
+        // Form Submit
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = loginEmail ? loginEmail.value.trim() : '';
+                const password = loginPassword ? loginPassword.value.trim() : '';
+                const name = loginName ? loginName.value.trim() : '';
+
+                if (loginError) loginError.style.display = 'none';
+                if (loginSuccess) loginSuccess.style.display = 'none';
+
+                if (!email || !password || (authMode === 'signup' && !name)) {
+                    showError('Please fill in all required fields.');
+                    return;
+                }
+
+                if (btnSubmit) {
+                    btnSubmit.disabled = true;
+                    btnSubmit.textContent = 'Processing...';
+                }
+
+                try {
+                    const endpoint = authMode === 'signup' ? `${BACKEND_URL}/api/auth/register` : `${BACKEND_URL}/api/auth/login`;
+                    const payload = authMode === 'signup' ? { name, email, password } : { email, password };
+
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+
+                    if (!res.ok || data.status !== 'success') {
+                        throw new Error(data.message || 'Authentication failed. Please check your credentials.');
+                    }
+
+                    showSuccess(data.message || (authMode === 'signup' ? 'Account created successfully!' : 'Signed in successfully!'));
+                    localStorage.setItem('vinayaka_user', JSON.stringify(data.user));
+                    applyLoggedInUser(data.user);
+
+                    setTimeout(() => {
+                        if (loginOverlay) loginOverlay.classList.add('hidden');
+                        if (btnSubmit) {
+                            btnSubmit.disabled = false;
+                            btnSubmit.textContent = authMode === 'signup' ? 'Create Account' : 'Sign In';
+                        }
+                    }, 650);
+
+                } catch (err) {
+                    console.warn('[Auth] Server call error, checking message:', err.message);
+                    if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
+                        showError(err.message);
+                    } else {
+                        // Offline local registration/login fallback
+                        const mockUser = {
+                            id: 'usr_' + Date.now(),
+                            name: name || email.split('@')[0],
+                            email: email,
+                            created_at: new Date().toISOString()
+                        };
+                        localStorage.setItem('vinayaka_user', JSON.stringify(mockUser));
+                        applyLoggedInUser(mockUser);
+                        showSuccess('Welcome! (Offline session activated)');
+                        setTimeout(() => {
+                            if (loginOverlay) loginOverlay.classList.add('hidden');
+                        }, 700);
+                    }
+                } finally {
+                    if (btnSubmit) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.textContent = authMode === 'signup' ? 'Create Account' : 'Sign In';
+                    }
+                }
+            });
+        }
+
+        function showError(msg) {
+            if (loginError) {
+                loginError.textContent = msg;
+                loginError.style.display = 'block';
+            }
+        }
+
+        function showSuccess(msg) {
+            if (loginSuccess) {
+                loginSuccess.textContent = msg;
+                loginSuccess.style.display = 'block';
+            }
+        }
+
+        // Guest Login
+        if (btnGuest) {
+            btnGuest.addEventListener('click', () => {
+                const guestUser = {
+                    id: 'guest',
+                    name: 'Guest Explorer',
+                    email: 'guest@vinayakajewellers.com',
+                    created_at: new Date().toISOString()
+                };
+                localStorage.setItem('vinayaka_user', JSON.stringify(guestUser));
+                applyLoggedInUser(guestUser);
+                if (loginOverlay) loginOverlay.classList.add('hidden');
+            });
+        }
+
+        // Settings menu toggle
+        if (settingsBtn && settingsMenu) {
+            settingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                settingsMenu.classList.toggle('active');
+            });
+            document.addEventListener('click', () => {
+                settingsMenu.classList.remove('active');
+            });
+        }
+
+        // Profile Modal open / close
+        function openProfile() {
+            let user = null;
+            try { user = JSON.parse(localStorage.getItem('vinayaka_user')); } catch (e) { }
+            if (!user) {
+                if (loginOverlay) loginOverlay.classList.remove('hidden');
+                return;
+            }
+
+            if (profileUserName) profileUserName.textContent = user.name || 'Valued Client';
+            if (profileUserEmail) profileUserEmail.textContent = user.email || 'client@vinayakajewellers.com';
+            if (profileAvatarInitials) {
+                const parts = (user.name || 'V J').trim().split(' ');
+                profileAvatarInitials.textContent = parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : parts[0].slice(0, 2).toUpperCase();
+            }
+            if (profileMemberSince && user.created_at) {
+                try {
+                    profileMemberSince.textContent = new Date(user.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
+                } catch (e) {
+                    profileMemberSince.textContent = '2026';
+                }
+            }
+
+            if (profileModalOverlay) profileModalOverlay.classList.remove('hidden');
+            if (settingsMenu) settingsMenu.classList.remove('active');
+        }
+
+        function closeProfile() {
+            if (profileModalOverlay) profileModalOverlay.classList.add('hidden');
+        }
+
+        if (userHeaderChip) userHeaderChip.addEventListener('click', openProfile);
+        if (btnProfile) btnProfile.addEventListener('click', (e) => { e.preventDefault(); openProfile(); });
+        if (btnCloseProfile) btnCloseProfile.addEventListener('click', closeProfile);
+        if (profileModalOverlay) {
+            profileModalOverlay.addEventListener('click', (e) => {
+                if (e.target === profileModalOverlay) closeProfile();
+            });
+        }
+
+        // Logout
+        function doLogout(e) {
+            if (e) e.preventDefault();
+            localStorage.removeItem('vinayaka_user');
+            closeProfile();
+            if (settingsMenu) settingsMenu.classList.remove('active');
+            if (userChipName) userChipName.textContent = 'Sign In';
+            if (loginEmail) loginEmail.value = '';
+            if (loginPassword) loginPassword.value = '';
+            if (loginName) loginName.value = '';
+            setAuthMode('signin');
+            if (loginOverlay) loginOverlay.classList.remove('hidden');
+        }
+
+        if (btnLogout) btnLogout.addEventListener('click', doLogout);
+        if (btnProfileModalLogout) btnProfileModalLogout.addEventListener('click', doLogout);
+
+        // Initial check
+        checkSession();
+    }
+
+    // Initialize Auth
+    initAuth();
 
     function initParticles() {
         const container = document.querySelector('.particles');

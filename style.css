@@ -3657,4 +3657,557 @@ body[data-mode="explore"] .app-layout,
   grid-template-columns: 270px 1fr 300px !important;
 }
 
-
+/* ── User Header Chip ───────────────────────────────────────── */
+.user-header-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(212, 168, 71, 0.08);
+  border: 1px solid rgba(212, 168, 71, 0.25);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  user-select: none;
+}
+
+.user-header-chip:hover {
+  background: rgba(212, 168, 71, 0.16);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.user-chip-icon {
+  font-size: 14px;
+}
+
+.user-chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Profile Modal Overlay ───────────────────────────────────── */
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 16, 0.85);
+  backdrop-filter: blur(16px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease, visibility 0.3s;
+}
+
+.profile-modal-box {
+  background: #0d111d;
+  border: 1px solid rgba(212, 168, 71, 0.3);
+  border-radius: 20px;
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(212, 168, 71, 0.15);
+  animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.profile-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+
+.profile-modal-close:hover {
+  color: #fff;
+}
+
+.profile-avatar-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.profile-avatar-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold) 0%, #a47621 100%);
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  box-shadow: 0 0 25px rgba(212, 168, 71, 0.4);
+}
+
+.profile-user-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.profile-user-email {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.profile-badge-chip {
+  display: inline-block;
+  background: rgba(212, 168, 71, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(212, 168, 71, 0.35);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 24px;
+  letter-spacing: 0.05em;
+}
+
+.profile-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.profile-detail-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-detail-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profile-detail-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.btn-profile-logout {
+  width: 100%;
+  background: rgba(220, 53, 69, 0.15);
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  color: #ff6b6b;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-profile-logout:hover {
+  background: rgba(220, 53, 69, 0.3);
+  border-color: #ff6b6b;
+}
+
+/* ── Utility: Hidden ───────────────────────────────────────────── */
+.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LOGIN OVERLAY  —  Full-screen premium auth gate
+   ══════════════════════════════════════════════════════════════════ */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: radial-gradient(ellipse at 50% 30%, rgba(30, 25, 15, 0.95) 0%, rgba(6, 8, 16, 0.98) 100%);
+  backdrop-filter: blur(24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: loginFadeIn 0.45s ease forwards;
+}
+
+@keyframes loginFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Login Box ─────────────────────────────────────────────────── */
+.login-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 44px 36px 36px;
+  background: rgba(12, 14, 28, 0.92);
+  border: 1px solid rgba(212, 168, 71, 0.25);
+  border-radius: 22px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(212, 168, 71, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  text-align: center;
+  animation: loginBoxSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes loginBoxSlide {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Login Logo ────────────────────────────────────────────────── */
+.login-logo {
+  margin-bottom: 20px;
+}
+
+.login-logo img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2px solid rgba(212, 168, 71, 0.4);
+  box-shadow: 0 0 30px rgba(212, 168, 71, 0.25);
+  object-fit: cover;
+}
+
+/* ── Login Title / Sub ─────────────────────────────────────────── */
+.login-box h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+
+.login-box p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+/* ── Login Tabs (Sign In / Sign Up) ────────────────────────────── */
+.login-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 22px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.login-tab {
+  flex: 1;
+  padding: 11px 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  letter-spacing: 0.03em;
+}
+
+.login-tab.active {
+  color: var(--gold);
+  background: rgba(212, 168, 71, 0.1);
+}
+
+.login-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 15%;
+  width: 70%;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
+}
+
+.login-tab:hover:not(.active) {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Login Form ────────────────────────────────────────────────── */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-form .input-group {
+  position: relative;
+}
+
+.login-form .input-group input {
+  width: 100%;
+  padding: 13px 16px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.login-form .input-group input::placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.login-form .input-group input:focus {
+  border-color: rgba(212, 168, 71, 0.5);
+  background: rgba(212, 168, 71, 0.04);
+  box-shadow: 0 0 0 3px rgba(212, 168, 71, 0.08);
+}
+
+/* ── Login Submit Button ───────────────────────────────────────── */
+.btn-login {
+  width: 100%;
+  padding: 13px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+  background: linear-gradient(135deg, var(--gold) 0%, #c49b38 50%, var(--gold-light) 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 18px rgba(212, 168, 71, 0.3);
+  margin-top: 4px;
+}
+
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(212, 168, 71, 0.45);
+  filter: brightness(1.05);
+}
+
+.btn-login:active {
+  transform: translateY(0);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Google Sign-In Button ─────────────────────────────────────── */
+.btn-google-login {
+  width: 100%;
+  padding: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-google-login:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-google-login img {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Login Error / Success Messages ────────────────────────────── */
+#login-error {
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  animation: errorShake 0.35s ease;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+#login-success {
+  background: rgba(78, 203, 113, 0.08);
+  border: 1px solid rgba(78, 203, 113, 0.2);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Settings Dropdown ─────────────────────────────────────────── */
+.settings-dropdown {
+  position: relative;
+}
+
+.settings-btn {
+  background: transparent;
+  border: 2px solid rgba(212, 168, 71, 0.25);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: all 0.25s ease;
+}
+
+.settings-btn:hover {
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(212, 168, 71, 0.2);
+  transform: scale(1.06);
+}
+
+.profile-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 180px;
+  background: rgba(12, 14, 28, 0.96);
+  border: 1px solid rgba(212, 168, 71, 0.2);
+  border-radius: 14px;
+  padding: 8px 0;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(212, 168, 71, 0.06);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.96);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 9999;
+}
+
+.settings-menu.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.settings-item:hover {
+  background: rgba(212, 168, 71, 0.08);
+  color: var(--gold);
+}
+
+/* ── Responsive Auth Adjustments ───────────────────────────────── */
+@media (max-width: 520px) {
+  .login-box {
+    max-width: 95vw;
+    padding: 32px 22px 28px;
+    border-radius: 18px;
+  }
+
+  .login-box h2 {
+    font-size: 19px;
+  }
+
+  .login-logo img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .user-header-chip {
+    padding: 4px 10px;
+  }
+
+  .user-chip-name {
+    max-width: 70px;
+    font-size: 11px;
+  }
+
+  .settings-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ── Profile Actions Container ─────────────────────────────────── */
+.profile-actions {
+  margin-top: 8px;
+}
+
+/* ── Slide Up Fade Animation (Profile Modal) ──────────────────── */
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

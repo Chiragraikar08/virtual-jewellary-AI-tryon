@@ -7,7 +7,7 @@
   <title>VINAYAKA JEWELLARY — Virtual Jewelry Try-On</title>
   <meta name="description"
     content="AI-powered virtual jewelry try-on. Explore stunning 3D jewelry and see how it looks on you using your webcam." />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=22" />
   <style>
     /* Try-On Overlay Checkboxes */
     .tryon-overlay-toggles {
@@ -145,11 +145,11 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <!-- Custom scripts with cache busting -->
-  <script src="jewelry-data.js?v=21" defer></script>
-  <script src="app.js?v=21" defer></script>
-  <script src="viewer3d.js?v=21" defer></script>
-  <script src="tryon.js?v=21" defer></script>
-  <script src="cart.js?v=21" defer></script>
+  <script src="jewelry-data.js?v=22" defer></script>
+  <script src="app.js?v=22" defer></script>
+  <script src="viewer3d.js?v=22" defer></script>
+  <script src="tryon.js?v=22" defer></script>
+  <script src="cart.js?v=22" defer></script>
 
 </head>
 
@@ -182,13 +182,14 @@
   <div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
 
   <!-- ═══════════════════════════════════════ LOGIN OVERLAY -->
+  <!-- ═══════════════════════════════════════ LOGIN OVERLAY -->
   <div class="login-overlay" id="login-overlay">
     <div class="login-box">
       <div class="login-logo">
         <img src="static/images/logo.jpg" alt="Vinayaka Jewellary Logo" />
       </div>
-      <h2>Welcome to VINAYAKA JEWELLARY</h2>
-      <p>Please log in or sign up to explore our premium try-on experience.</p>
+      <h2 id="login-title">Welcome to VINAYAKA JEWELLARY</h2>
+      <p id="login-sub">Please sign in to your account or register to explore our premium try-on experience.</p>
 
       <div class="login-tabs">
         <button type="button" class="login-tab active" id="tab-signin">Sign In</button>
@@ -196,12 +197,60 @@
       </div>
 
       <form class="login-form" id="login-form" onsubmit="return false;">
-        <input type="text" name="name" id="login-name" placeholder="Full Name" style="display: none;" />
-        <input type="text" name="email" id="login-email" placeholder="Email" required />
-        <input type="password" name="password" id="login-password" placeholder="Password" required />
-        <div id="login-error" style="display: none; color: #ff6b6b; font-size: 14px; margin-bottom: 15px; text-align: center;">Please fill in all fields</div>
+        <div class="input-group" id="group-name" style="display: none;">
+          <input type="text" name="name" id="login-name" placeholder="Full Name (e.g. Chirag Raikar)" autocomplete="name" />
+        </div>
+        <div class="input-group">
+          <input type="email" name="email" id="login-email" placeholder="Email Address" required autocomplete="email" />
+        </div>
+        <div class="input-group">
+          <input type="password" name="password" id="login-password" placeholder="Password (min. 4 characters)" required autocomplete="current-password" />
+        </div>
+        <div id="login-error" style="display: none; color: #ff6b6b; font-size: 13px; margin-top: -6px; text-align: center;"></div>
+        <div id="login-success" style="display: none; color: #4ecb71; font-size: 13px; margin-top: -6px; text-align: center;"></div>
         <button type="submit" class="btn-login" id="btn-login-submit">Sign In</button>
+        
+        <div style="margin-top: 14px; font-size: 13px; color: var(--text-muted);">
+          <span>Or explore freely: </span>
+          <button type="button" id="btn-guest-login" style="background: none; border: none; color: var(--gold); cursor: pointer; text-decoration: underline; font-weight: 600;">Continue as Guest</button>
+        </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ USER PROFILE MODAL -->
+  <div class="profile-modal-overlay hidden" id="profile-modal-overlay">
+    <div class="profile-modal-box">
+      <button class="profile-modal-close" id="btn-close-profile" aria-label="Close Profile">✕</button>
+      <div class="profile-avatar-wrapper">
+        <div class="profile-avatar-circle" id="profile-avatar-initials">VJ</div>
+      </div>
+      <h3 class="profile-user-name" id="profile-user-name">Guest User</h3>
+      <div class="profile-user-email" id="profile-user-email">guest@vinayakajewellers.com</div>
+      <div class="profile-badge-chip">👑 VIP Gold Member</div>
+
+      <div class="profile-details-grid">
+        <div class="profile-detail-card">
+          <span class="profile-detail-label">Member Since</span>
+          <span class="profile-detail-value" id="profile-member-since">Today</span>
+        </div>
+        <div class="profile-detail-card">
+          <span class="profile-detail-label">Database</span>
+          <span class="profile-detail-value" style="color:#4ecb71">Active (SQLite DB)</span>
+        </div>
+        <div class="profile-detail-card">
+          <span class="profile-detail-label">Reward Points</span>
+          <span class="profile-detail-value" style="color:var(--gold)">1,250 Pts</span>
+        </div>
+        <div class="profile-detail-card">
+          <span class="profile-detail-label">Saved Items</span>
+          <span class="profile-detail-value" id="profile-saved-items">5 Items</span>
+        </div>
+      </div>
+
+      <div class="profile-actions">
+        <button type="button" class="btn-profile-logout" id="btn-profile-modal-logout">🚪 Log Out</button>
+      </div>
     </div>
   </div>
 
@@ -239,6 +288,12 @@
           <div class="gold-rate-meta" id="gold-rate-meta"></div>
         </div>
         <div class="gold-live-dot"></div>
+      </div>
+
+      <!-- User Chip in Header -->
+      <div class="user-header-chip" id="user-header-chip" title="Click to view Profile">
+        <span class="user-chip-icon">👤</span>
+        <span class="user-chip-name" id="user-chip-name">Account</span>
       </div>
 
       <!-- Settings Dropdown -->
